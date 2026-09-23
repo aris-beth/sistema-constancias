@@ -1,0 +1,161 @@
+/**
+ * Una fila del Excel ya combinada con el resultado de normalizar su
+ * nombre. Es lo que el proceso main le entrega a React para la vista
+ * previa — nunca se manda el objeto crudo del Excel por separado del
+ * resultado de la normalización, para que la UI no tenga que repetir
+ * esa lógica.
+ */
+export interface FilaProcesada {
+  numeroFila: number
+  nombreOriginal: string
+  nombreNormalizado: string | null
+  gradoDetectado: string | null
+  textoGenerado: string | null
+  esPersonalizado: boolean
+  universidadExterna: string | null
+  confianza: 'alta' | 'baja' | null
+  /** Si normalizar esta fila falló, el mensaje queda aquí y los campos
+   * de arriba quedan en null — la fila se muestra en la vista previa
+   * marcada como error, en vez de detener todo el lote. */
+  error: string | null
+  participaComo: string
+  nombrePonencia: string | null
+  nombreEvento: string
+  fechaConstancia: string
+  universidadOrigen: string | null
+  modalidad: string
+  textoPersonalizado: string | null
+  categoria: string | null
+}
+
+export interface ResultadoCargaExcel {
+  nombreArchivo: string
+  filas: FilaProcesada[]
+}
+
+export interface GuardarLoteEntrada {
+  folioEvento: string
+  filas: FilaProcesada[]
+}
+
+export interface GuardarLoteResultado {
+  folioEvento: string
+  nombreEvento: string
+  constanciasCreadas: number
+  reconocimientosCreados: number
+  constanciasPendientes: number
+  foliosInternos: string[]
+}
+
+export interface GenerarPdfsEntrada {
+  folioEvento: string
+}
+
+export interface GenerarPdfsResultado {
+  rutas: string[]
+}
+
+export interface ConfiguracionSelloEntrada {
+  nombreDirectora: string
+  nombreRectora: string
+  rutaFirma: string | null
+  rutaImagenSello: string | null
+  nombreFirmante?: string
+  cargoFirmante?: string
+  rutaImagenFirma?: string | null
+}
+
+export interface ConfiguracionFirmantesGraduacionEntrada {
+  rectorNombre: string
+  rectorCargo: string
+  directorNombre: string
+  directorCargo: string
+}
+
+export interface RegistrarQrEntrada {
+  folioEvento: string
+}
+
+export interface ConfiguracionInicial {
+  sello: import('./configuracion').ConfiguracionSello
+  firmantesGraduacion: import('./configuracion').ConfiguracionFirmantesGraduacion
+  qrs: import('./configuracion').QrCatalogoEntry[]
+}
+
+export interface FiltrosEstadisticas {
+  fechaDesde: string | null
+  fechaHasta: string | null
+  folioEvento: string | null
+}
+
+export interface PeriodoEstadisticas {
+  fechaDesde: string | null
+  fechaHasta: string | null
+}
+
+export interface DesgloseEstadisticas {
+  etiqueta: string
+  documentos: number
+}
+
+export interface PuntoTendenciaEstadisticas {
+  fecha: string
+  documentos: number
+  eventos: number
+}
+
+export interface ResultadoEstadisticas {
+  totalEventos: number
+  totalDocumentos: number
+  totalReconocimientos: number
+  porRol: DesgloseEstadisticas[]
+  porCategoria: DesgloseEstadisticas[]
+  personasConMasDocumentos: DesgloseEstadisticas[]
+  tendencia: PuntoTendenciaEstadisticas[]
+}
+
+export interface EstadisticasEntrada {
+  filtros: FiltrosEstadisticas
+  comparacion?: {
+    periodoA: PeriodoEstadisticas
+    periodoB: PeriodoEstadisticas
+  }
+}
+
+export interface EstadisticasResultado {
+  actual: ResultadoEstadisticas
+  comparacion: {
+    periodoA: ResultadoEstadisticas
+    periodoB: ResultadoEstadisticas
+  } | null
+}
+
+export interface FilaProcesadaGraduacion {
+  numeroFila: number
+  nombreOriginal: string
+  nombreNormalizado: string | null
+  subtipo: string
+  generacion: string
+  carrera: string
+  fecha: string
+  textoGenerado: string | null
+  confianza: 'alta' | 'baja' | null
+  error: string | null
+}
+
+export interface ResultadoCargaGraduacion {
+  nombreArchivo: string
+  filas: FilaProcesadaGraduacion[]
+}
+
+export interface GuardarGraduacionEntrada {
+  folioEvento: string | null
+  filas: FilaProcesadaGraduacion[]
+}
+
+export interface GuardarGraduacionResultado {
+  folioEvento: string
+  nombreEvento: string
+  reconocimientosCreados: number
+  foliosInternos: string[]
+}
