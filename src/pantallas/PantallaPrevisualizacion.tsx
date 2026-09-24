@@ -1,15 +1,21 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { RegistroExcel } from './PantallaValidacion';
+import { RegistroExcel, ErrorValidacion } from './PantallaValidacion';
+import type { ModoConstancia } from './PantallaCarga';
+import { registroAFila, registroAFilaGraduacion } from '../utils/registros';
 import '../styles/design-system.css';
 
 interface PantallaPrevisualizacionProps {
   registros: RegistroExcel[];
+  errores: ErrorValidacion[];
   folioEvento: string;
+  modo: ModoConstancia;
 }
 
 export const PantallaPrevisualizacion: React.FC<PantallaPrevisualizacionProps> = ({
   registros,
-  folioEvento
+  errores,
+  folioEvento,
+  modo
 }) => {
   // Agrupar los registros por Rol para facilitar la navegación
   const rolesMap = useMemo(() => {
@@ -33,65 +39,50 @@ export const PantallaPrevisualizacion: React.FC<PantallaPrevisualizacionProps> =
   const registrosDelRol = rolesMap.get(rolActual) || [];
   const registroActual = registrosDelRol[docActualIndex];
 
-  useEffect(() => {
-    const fetchPrevisualizacion = async () => {
-      if (!registroActual) return;
+  // Todas las filas del lote se mandan al proceso main: el encabezado
+  // (CONSTANCIA/RECONOCIMIENTO) depende del conteo por persona.
+  const entradaBase = useMemo(
+    () =>
+      modo === 'graduacion'
+        ? { filasGraduacion: registros.map((r) => registroAFilaGraduacion(r, errores)) }
+        : { filasRegular: registros.map((r) => registroAFila(r, errores)) },
+    [registros, errores, modo],
+  );
 
+  useEffect(() => {
+    if (!registroActual) return;
+    let cancelado = false;
+
+    const cargarPrevisualizacion = async () => {
       setCargando(true);
       try {
-        const apiConPrevisualizacion = window.electronAPI as typeof window.electronAPI & { invoke?: (canal: string, entrada: unknown) => Promise<string> }
-        if (apiConPrevisualizacion.invoke) {
-          const html = await apiConPrevisualizacion.invoke('pdf:previsualizarHtml', {
-            idFila: registroActual.idFila,
-            folio: folioEvento
-          });
-          setHtmlContent(
-            `<html>
-              <head>
-                <style>
-                  body { font-size: 18px; line-height: 1.55; }
-                  p, div, span, td, h1, h2, h3, h4 { font-size: 1.05em; }
-                  .constancia-texto, .documento, .contenido, main, section { font-size: 1.1em; }
-                </style>
-              </head>
-              <body>${html}</body>
-            </html>`
-          );
-        } else {
-          const mockupHtml = `
-            <html>
-              <head>
-                <style>
-                  body { display:flex; align-items:center; justify-content:center; margin:0; height:100vh; font-family:sans-serif; color:#333; font-size:18px; }
-                  .constancia-card { text-align:center; border:2px solid #003B5C; padding:40px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.1); }
-                  h1 { color:#003B5C; margin-bottom:8px; font-size:2.1rem; }
-                  h2 { color:#666; font-weight:400; margin-top:0; font-size:1.5rem; }
-                  p { margin:32px 0; font-size:1.7rem; }
-                  .folio { color:#888; font-size:1rem; }
-                </style>
-              </head>
-              <body>
-                <div class="constancia-card">
-                  <h1>Constancia BUAP</h1>
-                  <h2>Rol: ${rolActual}</h2>
-                  <p>Otorgada a: <b>${registroActual.nombre}</b></p>
-                  <p class="folio">Folio: ${folioEvento || 'Sin folio'}</p>
-                </div>
-              </body>
-            </html>
-          `;
-          setTimeout(() => setHtmlContent(mockupHtml), 400);
-        }
+        const html = await window.electronAPI.previsualizarDocumento({
+          modo,
+          folioEvento,
+          numeroFila: Number(registroActual.idFila),
+          ...entradaBase,
+        });
+        if (!cancelado) setHtmlContent(html);
       } catch (error) {
-        console.error("Error al cargar HTML de previsualización:", error);
-        setHtmlContent('<html><body><h3 style="color:#DC2626;text-align:center; font-size:2rem;">Error al procesar la previsualización del documento.</h3></body></html>');
+        console.error('Error al cargar HTML de previsualización:', error);
+        if (!cancelado) {
+          const mensaje = error instanceof Error ? error.message : String(error);
+          setHtmlContent(
+            `<html><body style="font-family:sans-serif;color:#DC2626;text-align:center;padding:32px">` +
+              `<h3>No se pudo generar la previsualización</h3><p>${mensaje.replace(/</g, '&lt;')}</p></body></html>`,
+          );
+        }
       } finally {
-        setCargando(false);
+        if (!cancelado) setCargando(false);
       }
     };
 
-    fetchPrevisualizacion();
-  }, [registroActual, folioEvento]);
+    void cargarPrevisualizacion();
+    // Si el usuario navega rápido, la respuesta vieja se descarta.
+    return () => {
+      cancelado = true;
+    };
+  }, [registroActual, folioEvento, modo, entradaBase]);
 
   const manejarSiguienteRol = () => {
     setRolActualIndex((prev) => (prev + 1) % roles.length);

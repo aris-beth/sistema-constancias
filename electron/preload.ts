@@ -6,6 +6,7 @@ import type {
   GuardarGraduacionResultado,
   GenerarPdfsEntrada,
   GenerarPdfsResultado,
+  PrevisualizarEntrada,
   ResultadoCargaExcel,
   ResultadoCargaGraduacion,
   ConfiguracionInicial,
@@ -32,6 +33,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('excel:guardarGraduacion', entrada),
   generarPdfs: (entrada: GenerarPdfsEntrada): Promise<GenerarPdfsResultado> =>
     ipcRenderer.invoke('pdf:generar', entrada),
+  seleccionarCarpetaDestino: (): Promise<string | null> =>
+    ipcRenderer.invoke('pdf:seleccionarCarpeta'),
+  previsualizarDocumento: (entrada: PrevisualizarEntrada): Promise<string> =>
+    ipcRenderer.invoke('pdf:previsualizar', entrada),
   obtenerConfiguracion: (): Promise<ConfiguracionInicial> =>
     ipcRenderer.invoke('configuracion:obtener'),
   seleccionarImagenFirma: (): Promise<string | null> =>

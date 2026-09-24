@@ -8,6 +8,8 @@ import VistaPreviaCodigosQr from './pantallas/VistaPreviaCodigosQr';
 import { PantallaCarga, ModoConstancia } from './pantallas/PantallaCarga';
 import { PantallaValidacion, RegistroExcel, ErrorValidacion } from './pantallas/PantallaValidacion';
 import { PantallaPrevisualizacion } from './pantallas/PantallaPrevisualizacion';
+import { PantallaGenerar, ResumenGeneracion } from './pantallas/PantallaGenerar';
+import { registroAFila, registroAFilaGraduacion } from './utils/registros';
 import type { FilaProcesada, FilaProcesadaGraduacion } from '../shared/types/ipc';
 import './styles/design-system.css';
 
@@ -25,6 +27,14 @@ const App: React.FC = () => {
   const [errores, setErrores] = useState<ErrorValidacion[]>([]);
   const [cargandoArchivo, setCargandoArchivo] = useState(false);
   const [errorCarga, setErrorCarga] = useState<string | null>(null);
+
+  // Estado de la pantalla 4 (Generación)
+  const [rutaSalida, setRutaSalida] = useState<string>('');
+  const [generando, setGenerando] = useState(false);
+  const [resultadoGeneracion, setResultadoGeneracion] = useState<ResumenGeneracion | null>(null);
+  // Folio con el que el lote ya quedó guardado en la base. Sirve para que un
+  // reintento (p. ej. si falló solo el PDF) no intente guardar el evento otra vez.
+  const [folioPersistido, setFolioPersistido] = useState<string | null>(null);
 
   // Función de bloqueo de navegación
   const tieneErroresBloqueantes = pasoConstancias === 'validacion' && errores.length > 0;
@@ -107,6 +117,8 @@ const App: React.FC = () => {
     try {
       const resultado = await window.electronAPI.cargarExcel();
       if (!resultado) return; // el usuario canceló el diálogo nativo
+      setFolioPersistido(null);
+      setResultadoGeneracion(null);
       setRegistros(resultado.filas.map(filaARegistro));
       setErrores(erroresDeFilas(resultado.filas));
       setPasoConstancias('validacion');
@@ -125,6 +137,8 @@ const App: React.FC = () => {
     try {
       const resultado = await window.electronAPI.cargarGraduacion();
       if (!resultado) return; // el usuario canceló el diálogo nativo
+      setFolioPersistido(null);
+      setResultadoGeneracion(null);
       setRegistros(resultado.filas.map(filaGraduacionARegistro));
       setErrores(erroresDeFilas(resultado.filas));
       setPasoConstancias('validacion');
@@ -138,10 +152,91 @@ const App: React.FC = () => {
 
   // --- MÉTODOS DE INTEGRACIÓN DE EDICIÓN (Validación) ---
   const manejarActualizarRegistro = (idFila: string, campo: string, valor: any) => {
-    setRegistros(prev => prev.map(r => r.idFila === idFila ? { ...r, [campo]: valor } : r));
+    // Si se edita algo después de guardar, el lote guardado ya no coincide.
+    setFolioPersistido(null);
+    setRegistros(prev => prev.map(r => {
+      if (r.idFila !== idFila) return r;
+      // En graduación el reconocimiento se imprime con el nombre "original",
+      // así que una corrección del nombre debe reflejarse también ahí.
+      if (campo === 'nombre' && modoConstancia === 'graduacion') {
+        return { ...r, nombre: valor, nombreOriginal: valor };
+      }
+      return { ...r, [campo]: valor };
+    }));
     // Opcional: Revalidar el error en tiempo real (Ej. Si llenó el nombre, quitar error)
     if (campo === 'nombre' && valor.trim() !== '') {
       setErrores(prev => prev.filter(e => !(e.idFila === idFila && e.campo === 'nombre')));
+    }
+  };
+
+  // --- MÉTODOS DE INTEGRACIÓN DE GENERACIÓN (Pantalla 4) ---
+  const manejarExaminarCarpeta = async () => {
+    try {
+      const carpeta = await window.electronAPI.seleccionarCarpetaDestino();
+      if (carpeta) setRutaSalida(carpeta);
+    } catch (error) {
+      console.error('Error al elegir la carpeta:', error);
+    }
+  };
+
+  const manejarGenerar = async () => {
+    if (generando || !rutaSalida) return;
+    setGenerando(true);
+    setResultadoGeneracion(null);
+
+    try {
+      // 1) Guardar el lote en la base (una sola vez por folio).
+      let folio = folioEvento.trim();
+      if (folioPersistido === null || (modoConstancia === 'regular' && folioPersistido !== folio)) {
+        if (modoConstancia === 'regular') {
+          if (!folio) {
+            throw new Error('Falta el folio del evento. Regresa a la validación de datos y captúralo.');
+          }
+          await window.electronAPI.guardarLote({
+            folioEvento: folio,
+            filas: registros.map((r) => registroAFila(r, errores)),
+          });
+        } else {
+          const guardado = await window.electronAPI.guardarGraduacion({
+            folioEvento: folio || null,
+            filas: registros.map((r) => registroAFilaGraduacion(r, errores)),
+          });
+          folio = guardado.folioEvento;
+        }
+        setFolioPersistido(folio);
+      } else if (modoConstancia === 'graduacion') {
+        folio = folioPersistido;
+      }
+
+      // 2) Generar los PDFs en la carpeta elegida.
+      const pdfs = await window.electronAPI.generarPdfs({ folioEvento: folio, carpetaDestino: rutaSalida });
+      setResultadoGeneracion({
+        rolesExitosos: pdfs.roles.map((r) => ({ rol: r.rol, cantidad: r.cantidad })),
+        errores: pdfs.errores.map((e) => ({
+          constanciaId: `el archivo de ${e.rol}`,
+          cantidad: e.cantidad,
+          detalle: e.detalle,
+        })),
+        totalGenerados: pdfs.roles.reduce((total, r) => total + r.cantidad, 0),
+        rutaFinal: pdfs.carpetaEvento,
+        advertencias: pdfs.advertencias,
+      });
+    } catch (error) {
+      console.error('Error al generar los documentos:', error);
+      setResultadoGeneracion({
+        rolesExitosos: [],
+        errores: [
+          {
+            constanciaId: 'la generación',
+            cantidad: 1,
+            detalle: error instanceof Error ? error.message : String(error),
+          },
+        ],
+        totalGenerados: 0,
+        rutaFinal: rutaSalida,
+      });
+    } finally {
+      setGenerando(false);
     }
   };
 
@@ -179,11 +274,21 @@ const App: React.FC = () => {
         return (
           <PantallaPrevisualizacion 
             registros={registros}
+            errores={errores}
             folioEvento={folioEvento}
+            modo={modoConstancia}
           />
         );
       case 'generar':
-        return <div><h2>4. Generación y Códigos QR</h2><p>Constancias generadas exitosamente.</p></div>;
+        return (
+          <PantallaGenerar
+            rutaSalida={rutaSalida}
+            isGenerando={generando}
+            resultados={resultadoGeneracion}
+            onExaminarCarpeta={manejarExaminarCarpeta}
+            onGenerar={manejarGenerar}
+          />
+        );
       default:
         return null;
     }

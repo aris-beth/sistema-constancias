@@ -1,4 +1,7 @@
 import type { Modalidad } from '../../../shared/types/evento'
+import { esUniversidadBUAP } from '../instituciones'
+
+export { esUniversidadBUAP } from '../instituciones'
 
 export interface DatosTextoConstancia {
   participaComo: string
@@ -84,18 +87,11 @@ function resolverSede(modalidad: Modalidad): string {
   return sede
 }
 
-export function esUniversidadBUAP(universidadOrigen: string | null): boolean {
-  if (!universidadOrigen?.trim()) return false
-
-  const clave = normalizarClave(universidadOrigen).replace(/\s+/g, ' ')
-  return clave === 'BUAP' || clave === 'BENEMERITA UNIVERSIDAD AUTONOMA DE PUEBLA'
-}
-
 function esUniversidadExterna(universidadOrigen: string | null): boolean {
   return !esUniversidadBUAP(universidadOrigen)
 }
 
-function reemplazarCierrePorExterno(texto: string, nombreEvento: string): string {
+function reemplazarCierrePorExterno(texto: string): string {
   const clausulasDeSede = [
     'en la Facultad de Ciencias de la Computación, campus CU2',
     'de la Facultad de Ciencias de la Computación, campus CU2',
@@ -106,10 +102,10 @@ function reemplazarCierrePorExterno(texto: string, nombreEvento: string): string
   for (const clausula of clausulasDeSede) {
     const cierreConPunto = `${clausula}.`
     if (texto.endsWith(cierreConPunto)) {
-      return `${texto.slice(0, -cierreConPunto.length)}durante ${nombreEvento.trim()}.`
+      return `${texto.slice(0, -cierreConPunto.length).replace(/,\s*$/, '')}.`
     }
     if (texto.endsWith(clausula)) {
-      return `${texto.slice(0, -clausula.length)}durante ${nombreEvento.trim()}`
+      return `${texto.slice(0, -clausula.length).replace(/,\s*$/, '')}.`
     }
   }
 
@@ -157,7 +153,7 @@ export function generarTextoConstancia(
   const universidadExterna = esUniversidadExterna(datos.universidadOrigen)
   const textoBase = reemplazarVariables(plantilla, datos)
   const textoGenerado = universidadExterna
-    ? reemplazarCierrePorExterno(textoBase, datos.nombreEvento)
+    ? reemplazarCierrePorExterno(textoBase)
     : textoBase
 
   return {

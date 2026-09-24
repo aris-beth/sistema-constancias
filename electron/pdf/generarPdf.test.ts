@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { crearPaginaGraduacion, crearPaginaRegular, type DatosDocumentoPdf } from './generarPdf'
+import { crearHtmlDocumento, crearPaginaGraduacion, crearPaginaRegular, type DatosDocumentoPdf } from './generarPdf'
 import type { Evento } from '../../shared/types/evento'
 
 const sello = {
@@ -51,7 +51,7 @@ describe('generarPdf', () => {
     const html = crearPaginaRegular(documento({ nombre: textoDeLongitud(168) }), sello, evento)
 
     expect(html).toContain('<br/>')
-    expect(html).toContain('class="destinatario" style="font-size: 11pt"')
+    expect(html).toContain('class="nombre-destinatario" style="font-size: 11pt"')
     expect(html).not.toContain('class="destinatario">A:')
   })
 
@@ -59,7 +59,7 @@ describe('generarPdf', () => {
     const html = crearPaginaGraduacion(documento({ nombre: textoDeLongitud(168) }), firmantes)
 
     expect(html).toContain('<br/>')
-    expect(html).toContain('class="destinatario" style="font-size: 11pt"')
+    expect(html).toContain('class="nombre-destinatario" style="font-size: 11pt"')
   })
 
   it('reduce el cuerpo cuando la ponencia requiere un nivel menor', () => {
@@ -69,7 +69,8 @@ describe('generarPdf', () => {
       evento,
     )
 
-    expect(html).toContain('class="cuerpo" style="font-size: 11pt"')
+    expect(html).toContain('class="cuerpo"')
+    expect(html).toContain('class="cuerpo-destacado"')
   })
 
   it('renderiza el QR en su celda cuando el evento tiene ruta', () => {
@@ -79,12 +80,28 @@ describe('generarPdf', () => {
       { ...evento, rutaQr: 'C:/qrs/EVT-001.png' },
     )
 
-    expect(html).toContain('<div class="qr"><img src="file://C:/qrs/EVT-001.png" alt="Código QR" /></div>')
+    expect(html).toContain('class="qr"><img src="file:///C:/qrs/EVT-001.png"')
   })
 
   it('deja vacía la celda del QR cuando no hay ruta asociada', () => {
     const html = crearPaginaRegular(documento(), sello, evento)
 
     expect(html).toContain('<div class="qr"></div>')
+  })
+})
+
+describe('calibración de plantilla', () => {
+  it('mantiene la hoja en Carta horizontal y conserva las medidas del logo', () => {
+    const html = crearHtmlDocumento(crearPaginaRegular(documento(), sello, evento))
+    expect(html).toContain('@page { size: Letter landscape; margin: 0; }')
+    expect(html).toContain('width: 2.48in;')
+    expect(html).toContain('height: 3.27in;')
+    expect(html).toContain('font-size: 40pt;')
+    expect(html).toContain('letter-spacing: 4pt;')
+  })
+
+  it('usa 20 pt como tamaño base del destinatario', () => {
+    const html = crearPaginaRegular(documento({ nombre: 'PEREZ JUAN' }), sello, evento)
+    expect(html).toContain('class="nombre-destinatario" style="font-size: 20pt"')
   })
 })

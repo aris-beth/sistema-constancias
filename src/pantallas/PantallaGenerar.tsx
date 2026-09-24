@@ -6,6 +6,7 @@ export interface ResumenGeneracion {
   errores: { constanciaId: string; cantidad: number; detalle: string }[];
   totalGenerados: number;
   rutaFinal: string;
+  advertencias?: string[];
 }
 
 interface PantallaGenerarProps {
@@ -88,14 +89,23 @@ export const PantallaGenerar: React.FC<PantallaGenerarProps> = ({
               <li key={`error-${idx}`} className="bitacora-item">
                 <span className="badge badge-error">Error</span>
                 <span>
-                  <strong>{err.cantidad}</strong> error(es) en constancia <strong>{err.constanciaId}</strong>
+                  <strong>{err.cantidad}</strong> error(es) en <strong>{err.constanciaId}</strong>
                   <br/>
                   <small style={{ color: 'var(--color-texto-secundario)' }}>Detalle: {err.detalle}</small>
                 </span>
               </li>
             ))}
 
+            {/* Advertencias (QR o firma faltantes, recursos, etc.) */}
+            {(resultados.advertencias ?? []).map((aviso, idx) => (
+              <li key={`aviso-${idx}`} className="bitacora-item">
+                <span className="badge badge-info">Aviso</span>
+                <span>{aviso}</span>
+              </li>
+            ))}
+
             {/* Ubicación Final */}
+            {resultados.totalGenerados > 0 && (
             <li className="bitacora-item" style={{ marginTop: '8px' }}>
               <span className="badge badge-info">Ubicación</span>
               <span>
@@ -104,6 +114,7 @@ export const PantallaGenerar: React.FC<PantallaGenerarProps> = ({
                 <strong style={{ wordBreak: 'break-all', color: 'var(--color-institucional)' }}>{resultados.rutaFinal}</strong>
               </span>
             </li>
+            )}
             
           </ul>
         </div>

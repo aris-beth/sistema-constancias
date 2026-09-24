@@ -18,7 +18,7 @@ describe('generarTextoConstancia', () => {
   })
 
   it.each(['Presencial CU', 'Presencial CU2', 'En línea', 'Otro'] as const)(
-    'cierra con durante el evento para una universidad externa con modalidad %s',
+    'elimina la sede para una universidad externa con modalidad %s',
     (modalidad) => {
     const resultado = generarTextoConstancia({
       ...datosBase,
@@ -26,7 +26,7 @@ describe('generarTextoConstancia', () => {
       modalidad,
     })
 
-    expect(resultado.textoGenerado.endsWith('durante Congreso 2026.')).toBe(true)
+    expect(resultado.textoGenerado.endsWith('en el evento Congreso 2026.')).toBe(true)
     expect(resultado.textoGenerado).not.toContain('Facultad de Ciencias de la Computación')
     },
   )

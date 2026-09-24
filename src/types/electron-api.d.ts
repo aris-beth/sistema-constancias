@@ -3,6 +3,7 @@ import type {
   GuardarGraduacionResultado,
   GenerarPdfsEntrada,
   GenerarPdfsResultado,
+  PrevisualizarEntrada,
   GuardarLoteEntrada,
   GuardarLoteResultado,
   ResultadoCargaExcel,
@@ -29,6 +30,8 @@ declare global {
       guardarLote: (entrada: GuardarLoteEntrada) => Promise<GuardarLoteResultado>
       guardarGraduacion: (entrada: GuardarGraduacionEntrada) => Promise<GuardarGraduacionResultado>
       generarPdfs: (entrada: GenerarPdfsEntrada) => Promise<GenerarPdfsResultado>
+      seleccionarCarpetaDestino: () => Promise<string | null>
+      previsualizarDocumento: (entrada: PrevisualizarEntrada) => Promise<string>
       obtenerConfiguracion: () => Promise<ConfiguracionInicial>
       seleccionarImagenFirma: () => Promise<string | null>
       seleccionarImagenSello: () => Promise<string | null>

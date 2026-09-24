@@ -49,10 +49,41 @@ export interface GuardarLoteResultado {
 
 export interface GenerarPdfsEntrada {
   folioEvento: string
+  /** Carpeta elegida en la pantalla de generación. Si se omite, el proceso
+   * main abre su propio diálogo para elegirla. */
+  carpetaDestino?: string
+}
+
+export interface ResumenPdfRol {
+  rol: string
+  cantidad: number
+  ruta: string
+}
+
+export interface ErrorPdfRol {
+  rol: string
+  cantidad: number
+  detalle: string
 }
 
 export interface GenerarPdfsResultado {
   rutas: string[]
+  carpetaEvento: string
+  roles: ResumenPdfRol[]
+  /** Un rol que falla no detiene a los demás: se reporta aquí. */
+  errores: ErrorPdfRol[]
+  advertencias: string[]
+}
+
+export interface PrevisualizarEntrada {
+  modo: 'regular' | 'graduacion'
+  folioEvento: string
+  /** Número de fila (del Excel) del documento que se quiere ver. */
+  numeroFila: number
+  /** Todas las filas del lote: el encabezado CONSTANCIA/RECONOCIMIENTO
+   * depende del conteo por persona dentro del evento. */
+  filasRegular?: FilaProcesada[]
+  filasGraduacion?: FilaProcesadaGraduacion[]
 }
 
 export interface ConfiguracionSelloEntrada {

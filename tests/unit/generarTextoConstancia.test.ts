@@ -15,9 +15,14 @@ describe('generarTextoConstancia', () => {
   it.each([
     'BUAP',
     'buap',
+    'B.U.A.P.',
     'Benemérita Universidad Autónoma de Puebla',
     'BENEMERITA UNIVERSIDAD AUTONOMA DE PUEBLA',
     'benemerita universidad autonoma de puebla',
+    'Benemérita Universidad Autónoma de Puebla (BUAP)',
+    'Benemérita Universidad de Puebla',
+    'Universidad Autónoma de Puebla',
+    'Universidad de Puebla',
   ])('reconoce como BUAP la universidad "%s"', (universidad) => {
     expect(esUniversidadBUAP(universidad)).toBe(true)
   })
@@ -96,7 +101,7 @@ describe('generarTextoConstancia', () => {
         universidadOrigen: 'Universidad Nacional',
       }),
     ).toEqual({
-      textoGenerado: 'Por participar como Organizador, en el evento Congreso 2026, durante Congreso 2026.',
+        textoGenerado: 'Por participar como Organizador, en el evento Congreso 2026.',
       esPersonalizado: false,
       universidadExterna: 'Universidad Nacional',
     })
@@ -109,7 +114,7 @@ describe('generarTextoConstancia', () => {
       modalidad: 'Presencial CU' as const,
     })
 
-    expect(resultado.textoGenerado.endsWith('durante Congreso 2026.')).toBe(true)
+    expect(resultado.textoGenerado.endsWith('en el evento Congreso 2026.')).toBe(true)
     expect(resultado.textoGenerado).not.toContain('Facultad de Ciencias de la Computación')
   })
 
