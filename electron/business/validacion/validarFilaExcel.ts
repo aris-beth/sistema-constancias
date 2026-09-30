@@ -36,6 +36,7 @@ function extraerPartesFecha(valor: string): { dia: number; mes: number; anio: nu
   const texto = valor.trim()
   const fechaISO = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(texto)
   const fechaLatinoamericana = /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/.exec(texto)
+  const fechaEspanola = /^(\d{1,2})\s+de\s+([a-záéíóúüñ]+)\s+de\s+(\d{4})$/i.exec(texto)
 
   if (fechaISO) {
     return { anio: Number(fechaISO[1]), mes: Number(fechaISO[2]), dia: Number(fechaISO[3]) }
@@ -45,6 +46,14 @@ function extraerPartesFecha(valor: string): { dia: number; mes: number; anio: nu
       anio: Number(fechaLatinoamericana[3]),
       mes: Number(fechaLatinoamericana[2]),
       dia: Number(fechaLatinoamericana[1]),
+    }
+  }
+  if (fechaEspanola) {
+    const mes = NOMBRES_MESES.findIndex(
+      (nombre) => normalizarValorCatalogo(nombre) === normalizarValorCatalogo(fechaEspanola[2]),
+    ) + 1
+    if (mes > 0) {
+      return { anio: Number(fechaEspanola[3]), mes, dia: Number(fechaEspanola[1]) }
     }
   }
   return null
@@ -64,7 +73,7 @@ export function formatearFechaConstancia(valor: string): string {
   return `${partes.dia} de ${NOMBRES_MESES[partes.mes - 1]} de ${partes.anio}`
 }
 
-function tieneFechaValida(valor: string): boolean {
+export function tieneFechaConstanciaValida(valor: string): boolean {
   const texto = valor.trim()
   if (!texto) return false
 
@@ -111,7 +120,7 @@ export function validarFilaExcel(
     errores.push(`${prefijo}: revisa el nombre del evento; no puede estar vacío ni entre comillas.`)
   }
 
-  if (!tieneFechaValida(fila.fechaConstancia)) {
+  if (!tieneFechaConstanciaValida(fila.fechaConstancia)) {
     errores.push(`${prefijo}: la fecha de la constancia no es válida.`)
   }
 

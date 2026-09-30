@@ -19,6 +19,15 @@ describe('validarFilaExcelGraduacion', () => {
     })
   })
 
+  it('acepta la fecha en el formato español que se muestra en la tabla', () => {
+    expect(
+      validarFilaExcelGraduacion(
+        { ...filaValida, fecha: '30 de Junio de 2026' },
+        ['Licenciatura'],
+      ),
+    ).toEqual({ valida: true, errores: [] })
+  })
+
   it.each([
     ['nombre', { nombreCompleto: '' }, 'falta el nombre completo.'],
     ['subtipo', { subtipo: 'Diplomado' }, "el subtipo 'Diplomado' no está en el catálogo de graduación."],

@@ -87,6 +87,18 @@ function ejecutarMigraciones(db: Database.Database): void {
   // que un CREATE INDEX sobre ella fallaría si estuviera en ese script.
   // Aquí ya se garantizó arriba que la columna existe.
   db.exec('CREATE INDEX IF NOT EXISTS idx_constancia_estado ON constancia(estado)')
+
+  // El catálogo de QR desapareció: sus folios se conservan en el catálogo
+  // de folios (INSERT OR IGNORE: idempotente en cada arranque).
+  const tablaQr = db
+    .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'qr_catalogo'")
+    .get()
+  if (tablaQr) {
+    db.exec(
+      `INSERT OR IGNORE INTO folio_catalogo (folio, nombre_referencia, fecha_registro)
+       SELECT folio_evento, NULL, fecha_carga FROM qr_catalogo`,
+    )
+  }
 }
 
 /**

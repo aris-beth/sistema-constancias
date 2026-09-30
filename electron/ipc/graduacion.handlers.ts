@@ -86,4 +86,16 @@ export function registrarManejadorCargarGraduacion(): void {
       filas: filas.map((fila) => procesarFila(fila, catalogo, subtipos)),
     }
   })
+
+  ipcMain.handle('excel:revalidarGraduacion', (_evento, filas: FilaExcelCrudaGraduacion[]): FilaProcesadaGraduacion[] => {
+    if (!Array.isArray(filas)) throw new Error('La solicitud de revalidación no es válida.')
+    const catalogo = construirMapaAbreviaturas(
+      listarAbreviaturas().map((entrada) => ({
+        formaEncontrada: entrada.formaEncontrada,
+        abreviaturaAceptada: entrada.abreviaturaAceptada,
+      })),
+    )
+    const subtipos = listarSubtiposGraduacion()
+    return filas.map((fila) => procesarFila(fila, catalogo, subtipos))
+  })
 }

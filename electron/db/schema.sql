@@ -1,7 +1,7 @@
 -- Esquema de la base de datos del Sistema de Constancias.
 -- Corresponde a la sección "Modelo de datos" del Documento de Diseño Técnico,
 -- ampliado con las tablas de configuración editable (sello/firma, firmantes
--- de graduación, catálogo de QR) y el catálogo de subtipos de graduación que
+-- de graduación, catálogo de folios) y el catálogo de subtipos de graduación que
 -- exige la sección "Mantenibilidad" de los requerimientos: poder ajustar
 -- estos datos sin depender de un desarrollador para cada cambio.
 --
@@ -19,8 +19,7 @@ CREATE TABLE IF NOT EXISTS evento (
   modalidad TEXT NOT NULL CHECK (modalidad IN ('Presencial CU', 'Presencial CU2', 'En línea', 'Otro')),
   tipo_plantilla TEXT NOT NULL CHECK (tipo_plantilla IN ('regular', 'graduacion')),
   generacion TEXT,
-  carrera TEXT,
-  ruta_qr TEXT
+  carrera TEXT
 );
 
 CREATE TABLE IF NOT EXISTS participante (
@@ -102,13 +101,6 @@ CREATE TABLE IF NOT EXISTS configuracion_sello (
     fecha_actualizacion DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS registro_qr (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    folio_asociado TEXT NOT NULL,
-    ruta_qr TEXT NOT NULL,
-    fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
 -- Configuración editable de los dos firmantes de reconocimientos de
 -- graduación (Rector/a y Director/a — sección 6.5 de requerimientos).
 -- También singleton: cambian con poca frecuencia y se editan desde la
@@ -122,14 +114,13 @@ CREATE TABLE IF NOT EXISTS configuracion_firmantes_graduacion (
   fecha_actualizacion TEXT NOT NULL
 );
 
--- Catálogo de códigos QR ya cargados (sección 6.4 y 9.3 de requerimientos):
--- el asociador de QR busca aquí, por folio de evento, la imagen que debe
--- incluirse en las constancias regulares de ese evento.
-CREATE TABLE IF NOT EXISTS qr_catalogo (
+-- Catálogo de folios: folios ya existentes (capturados a mano) o folios
+-- autogenerados que se quieren corregir. El folio es único.
+CREATE TABLE IF NOT EXISTS folio_catalogo (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  folio_evento TEXT UNIQUE NOT NULL,
-  ruta_archivo TEXT NOT NULL,
-  fecha_carga TEXT NOT NULL
+  folio TEXT UNIQUE NOT NULL,
+  nombre_referencia TEXT,
+  fecha_registro TEXT NOT NULL
 );
 
 -- Índices: aceleran las consultas del módulo de estadísticas y de búsqueda

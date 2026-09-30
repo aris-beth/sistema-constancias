@@ -1,15 +1,20 @@
 // src/App.tsx
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { BarraNavegacionPrincipal, VistaActiva } from './components/BarraNavegacionPrincipal';
 import { BotonCircular } from './components/BotonCircular';
 import EditorConfiguracion from './EditorConfiguracion';
 import PanelEstadisticas from './PanelEstadisticas';
-import VistaPreviaCodigosQr from './pantallas/VistaPreviaCodigosQr';
+import CatalogoFolios from './pantallas/CatalogoFolios';
 import { PantallaCarga, ModoConstancia } from './pantallas/PantallaCarga';
 import { PantallaValidacion, RegistroExcel, ErrorValidacion } from './pantallas/PantallaValidacion';
 import { PantallaPrevisualizacion } from './pantallas/PantallaPrevisualizacion';
 import { PantallaGenerar, ResumenGeneracion } from './pantallas/PantallaGenerar';
-import { registroAFila, registroAFilaGraduacion } from './utils/registros';
+import {
+  registroAFila,
+  registroAFilaGraduacion,
+  registroAFilaCruda,
+  registroAFilaCrudaGraduacion,
+} from './utils/registros';
 import type { FilaProcesada, FilaProcesadaGraduacion } from '../shared/types/ipc';
 import './styles/design-system.css';
 
@@ -17,7 +22,7 @@ type PasoConstancias = 'carga' | 'validacion' | 'previsualizacion' | 'generar';
 
 const App: React.FC = () => {
   const [vistaActiva, setVistaActiva] = useState<VistaActiva>('constancias');
-  const [volverDesdeQr, setVolverDesdeQr] = useState<VistaActiva>('plantillas');
+  const [volverDesdeFolios, setVolverDesdeFolios] = useState<VistaActiva>('plantillas');
   const [pasoConstancias, setPasoConstancias] = useState<PasoConstancias>('carga');
 
   // Estados de datos (Preservados en memoria al cambiar de vistas)
@@ -27,6 +32,12 @@ const App: React.FC = () => {
   const [errores, setErrores] = useState<ErrorValidacion[]>([]);
   const [cargandoArchivo, setCargandoArchivo] = useState(false);
   const [errorCarga, setErrorCarga] = useState<string | null>(null);
+  // Filas editadas que todavía no se han revalidado con "Actualizar cambios".
+  const [filasPendientes, setFilasPendientes] = useState<string[]>([]);
+  const [actualizando, setActualizando] = useState(false);
+  const [mensajeActualizacion, setMensajeActualizacion] = useState<string | null>(null);
+  // Campos que la persona escribió a mano: una revalidación no debe pisarlos.
+  const camposManuales = useRef<Map<string, Set<string>>>(new Map());
 
   // Estado de la pantalla 4 (Generación)
   const [rutaSalida, setRutaSalida] = useState<string>('');
@@ -37,7 +48,8 @@ const App: React.FC = () => {
   const [folioPersistido, setFolioPersistido] = useState<string | null>(null);
 
   // Función de bloqueo de navegación
-  const tieneErroresBloqueantes = pasoConstancias === 'validacion' && errores.length > 0;
+  const tieneErroresBloqueantes =
+    pasoConstancias === 'validacion' && (errores.length > 0 || filasPendientes.length > 0);
 
   const manejarSiguiente = () => {
     if (tieneErroresBloqueantes) return; // Validación funcional: Bloquear si hay errores
@@ -110,6 +122,12 @@ const App: React.FC = () => {
         mensaje: fila.error as string,
       }));
 
+  const reiniciarEdicion = () => {
+    camposManuales.current = new Map();
+    setFilasPendientes([]);
+    setMensajeActualizacion(null);
+  };
+
   const manejarCargarExcel = async () => {
     if (cargandoArchivo) return;
     setCargandoArchivo(true);
@@ -117,6 +135,7 @@ const App: React.FC = () => {
     try {
       const resultado = await window.electronAPI.cargarExcel();
       if (!resultado) return; // el usuario canceló el diálogo nativo
+      reiniciarEdicion();
       setFolioPersistido(null);
       setResultadoGeneracion(null);
       setRegistros(resultado.filas.map(filaARegistro));
@@ -137,6 +156,7 @@ const App: React.FC = () => {
     try {
       const resultado = await window.electronAPI.cargarGraduacion();
       if (!resultado) return; // el usuario canceló el diálogo nativo
+      reiniciarEdicion();
       setFolioPersistido(null);
       setResultadoGeneracion(null);
       setRegistros(resultado.filas.map(filaGraduacionARegistro));
@@ -151,9 +171,18 @@ const App: React.FC = () => {
   };
 
   // --- MÉTODOS DE INTEGRACIÓN DE EDICIÓN (Validación) ---
+  const marcarPendientes = (ids: string[]) => {
+    setFilasPendientes((prev) => Array.from(new Set([...prev, ...ids])));
+    setMensajeActualizacion(null);
+  };
+
   const manejarActualizarRegistro = (idFila: string, campo: string, valor: any) => {
     // Si se edita algo después de guardar, el lote guardado ya no coincide.
     setFolioPersistido(null);
+    const manuales = camposManuales.current.get(idFila) ?? new Set<string>();
+    manuales.add(campo);
+    camposManuales.current.set(idFila, manuales);
+    marcarPendientes([idFila]);
     setRegistros(prev => prev.map(r => {
       if (r.idFila !== idFila) return r;
       // En graduación el reconocimiento se imprime con el nombre "original",
@@ -163,9 +192,63 @@ const App: React.FC = () => {
       }
       return { ...r, [campo]: valor };
     }));
-    // Opcional: Revalidar el error en tiempo real (Ej. Si llenó el nombre, quitar error)
-    if (campo === 'nombre' && valor.trim() !== '') {
-      setErrores(prev => prev.filter(e => !(e.idFila === idFila && e.campo === 'nombre')));
+  };
+
+  // El nombre del evento es un solo dato por lote: se aplica a todas las filas.
+  const manejarCambiarNombreEvento = (nombre: string) => {
+    if (modoConstancia !== 'regular') return;
+    setFolioPersistido(null);
+    setRegistros(prev => prev.map(r => ({ ...r, nombreEvento: nombre })));
+    marcarPendientes(registros.map(r => r.idFila));
+  };
+
+  // Botón "Actualizar cambios": vuelve a validar en el backend las filas
+  // editadas (y las que tenían error) y refresca errores, textos y estado.
+  const manejarActualizarCambios = async () => {
+    if (actualizando) return;
+    const conError = new Set(errores.map(e => e.idFila));
+    const ids = new Set([...filasPendientes, ...conError]);
+    const aRevalidar = registros.filter(r => ids.has(r.idFila));
+    if (aRevalidar.length === 0) return;
+
+    setActualizando(true);
+    setMensajeActualizacion(null);
+    try {
+      const filas = modoConstancia === 'regular'
+        ? await window.electronAPI.revalidarFilas(aRevalidar.map(registroAFilaCruda))
+        : await window.electronAPI.revalidarFilasGraduacion(aRevalidar.map(registroAFilaCrudaGraduacion));
+      const porId = new Map<string, any>(filas.map((fila) => [String(fila.numeroFila), fila]));
+
+      setRegistros(prev => prev.map(r => {
+        const nueva = porId.get(r.idFila);
+        if (!nueva || nueva.error) return r;
+        const manuales = camposManuales.current.get(r.idFila) ?? new Set<string>();
+        const actualizado: RegistroExcel = { ...r };
+        if (!manuales.has('nombre')) actualizado.nombre = nueva.nombreNormalizado ?? r.nombre;
+        if (!manuales.has('textoGenerado')) actualizado.textoGenerado = nueva.textoGenerado;
+        actualizado.confianza = nueva.confianza;
+        if (modoConstancia === 'regular') {
+          actualizado.gradoDetectado = nueva.gradoDetectado;
+          actualizado.esPersonalizado = nueva.esPersonalizado;
+          actualizado.universidadExterna = nueva.universidadExterna;
+          actualizado.fechaConstancia = nueva.fechaConstancia;
+        }
+        return actualizado;
+      }));
+
+      const nuevosErrores = erroresDeFilas(filas);
+      setErrores(prev => [...prev.filter(e => !porId.has(e.idFila)), ...nuevosErrores]);
+      setFilasPendientes([]);
+      setFolioPersistido(null);
+      setMensajeActualizacion(
+        nuevosErrores.length === 0
+          ? 'Cambios actualizados: ya no hay errores.'
+          : `Cambios actualizados: aún quedan ${nuevosErrores.length} fila(s) con error.`,
+      );
+    } catch (error) {
+      setMensajeActualizacion(`No se pudieron actualizar los cambios: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setActualizando(false);
     }
   };
 
@@ -185,26 +268,26 @@ const App: React.FC = () => {
     setResultadoGeneracion(null);
 
     try {
-      // 1) Guardar el lote en la base (una sola vez por folio).
+      // 1) Guardar el lote en la base (una sola vez por folio). Si el folio
+      // está vacío, el sistema lo genera automáticamente al guardar.
       let folio = folioEvento.trim();
+      const guardarLote = async (): Promise<string> => {
+        const guardado = modoConstancia === 'regular'
+          ? await window.electronAPI.guardarLote({
+              folioEvento: folio || null,
+              filas: registros.map((r) => registroAFila(r, errores)),
+            })
+          : await window.electronAPI.guardarGraduacion({
+              folioEvento: folio || null,
+              filas: registros.map((r) => registroAFilaGraduacion(r, errores)),
+            });
+        return guardado.folioEvento;
+      };
       if (folioPersistido === null || (modoConstancia === 'regular' && folioPersistido !== folio)) {
-        if (modoConstancia === 'regular') {
-          if (!folio) {
-            throw new Error('Falta el folio del evento. Regresa a la validación de datos y captúralo.');
-          }
-          await window.electronAPI.guardarLote({
-            folioEvento: folio,
-            filas: registros.map((r) => registroAFila(r, errores)),
-          });
-        } else {
-          const guardado = await window.electronAPI.guardarGraduacion({
-            folioEvento: folio || null,
-            filas: registros.map((r) => registroAFilaGraduacion(r, errores)),
-          });
-          folio = guardado.folioEvento;
-        }
+        folio = await guardarLote();
         setFolioPersistido(folio);
-      } else if (modoConstancia === 'graduacion') {
+        setFolioEvento(folio); // refleja en pantalla el folio autogenerado
+      } else {
         folio = folioPersistido;
       }
 
@@ -268,6 +351,12 @@ const App: React.FC = () => {
             registros={registros}
             errores={errores}
             onActualizarRegistro={manejarActualizarRegistro}
+            modo={modoConstancia}
+            onCambiarNombreEvento={manejarCambiarNombreEvento}
+            filasPendientes={filasPendientes}
+            actualizando={actualizando}
+            mensajeActualizacion={mensajeActualizacion}
+            onActualizarCambios={manejarActualizarCambios}
           />
         );
       case 'previsualizacion':
@@ -297,11 +386,11 @@ const App: React.FC = () => {
   const renderizarContenidoPrincipal = () => {
     switch (vistaActiva) {
       case 'plantillas':
-        return <EditorConfiguracion onVolver={manejarVolverDesdeConfiguracion} onAbrirQrs={() => { setVolverDesdeQr('plantillas'); setVistaActiva('qrs'); }} />;
+        return <EditorConfiguracion onVolver={manejarVolverDesdeConfiguracion} onAbrirFolios={() => { setVolverDesdeFolios('plantillas'); setVistaActiva('folios'); }} />;
       case 'metricas':
         return <PanelEstadisticas onVolver={manejarVolverDesdeConfiguracion} />;
-      case 'qrs':
-        return <VistaPreviaCodigosQr onVolver={() => setVistaActiva(volverDesdeQr)} />;
+      case 'folios':
+        return <CatalogoFolios onVolver={() => setVistaActiva(volverDesdeFolios)} />;
       case 'constancias':
       default:
         return renderizarFlujoConstancias();

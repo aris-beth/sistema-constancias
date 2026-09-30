@@ -1,10 +1,8 @@
 import { obtenerBaseDeDatos } from '../connection'
-import { asociarQr } from '../../business/qr/asociarQr'
 import { orquestarGuardadoLote, type FilaLoteResuelta } from '../../business/orquestarGuardadoLote'
 import { separarParticipantes } from '../../business/separarParticipantes'
 import { normalizarCategoria } from '../../business/validacion/validarFilaExcel'
-import { actualizarRutaQr } from './evento.repository'
-import { listarQrsCargados } from './qrCatalogo.repository'
+import { generarFolioAutomatico } from './folio.repository'
 import type { GuardarLoteResultado, FilaProcesada } from '../../../shared/types/ipc'
 import type { Modalidad } from '../../../shared/types/evento'
 
@@ -26,11 +24,11 @@ function validarFilaGuardable(fila: FilaProcesada): asserts fila is FilaProcesad
 }
 
 export function guardarLoteRegular(
-  folioEvento: string,
+  folioEvento: string | null,
   filas: FilaProcesada[],
 ): GuardarLoteResultado {
-  const folio = folioEvento.trim()
-  if (!folio) throw new Error('El folio del evento es obligatorio.')
+  // Si no se indica folio, se genera automáticamente al guardar.
+  const folioSolicitado = folioEvento?.trim() || null
 
   const filasValidas = filas.filter((fila) => fila.error === null)
   if (filasValidas.length === 0) throw new Error('No hay filas válidas para guardar.')
@@ -40,22 +38,23 @@ export function guardarLoteRegular(
   })
 
   const db = obtenerBaseDeDatos()
-  const existente = db.prepare('SELECT id FROM evento WHERE folio = ?').get(folio)
-  if (existente) throw new Error(`Ya existe un evento registrado con el folio "${folio}".`)
+  if (folioSolicitado) {
+    const existente = db.prepare('SELECT id FROM evento WHERE folio = ?').get(folioSolicitado)
+    if (existente) throw new Error(`Ya existe un evento registrado con el folio "${folioSolicitado}".`)
+  }
 
   const transaccion = db.transaction(() => {
     const primera = filasGuardables[0]
+    const folio =
+      folioSolicitado ??
+      generarFolioAutomatico(primera.nombreEvento.trim(), primera.fechaConstancia.trim())
     const eventoResultado = db
       .prepare(
-        `INSERT INTO evento (folio, nombre_evento, fecha_constancia, modalidad, tipo_plantilla, generacion, carrera, ruta_qr)
-         VALUES (?, ?, ?, ?, 'regular', NULL, NULL, NULL)`,
+        `INSERT INTO evento (folio, nombre_evento, fecha_constancia, modalidad, tipo_plantilla, generacion, carrera)
+         VALUES (?, ?, ?, ?, 'regular', NULL, NULL)`,
       )
       .run(folio, primera.nombreEvento.trim(), primera.fechaConstancia.trim(), primera.modalidad)
     const eventoId = Number(eventoResultado.lastInsertRowid)
-    const asociacionQr = asociarQr(folio, listarQrsCargados())
-    if (asociacionQr.rutaQr) {
-      actualizarRutaQr(eventoId, asociacionQr.rutaQr)
-    }
 
     const roles = new Map<string, number>()
     const buscarRol = db.prepare('SELECT id, nombre_rol FROM rol')

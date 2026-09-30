@@ -17,13 +17,6 @@ export interface ConfiguracionSello {
   rutaImagenFirma?: string | null;
 }
 
-export interface RegistroQr {
-  id?: number;
-  folioAsociado: string;
-  rutaQr: string;
-  fechaRegistro?: string;
-}
-
 export type ConfiguracionSelloActualizable = Omit<ConfiguracionSello, 'fechaActualizacion'>
 
 /**
@@ -46,15 +39,15 @@ export type ConfiguracionFirmantesGraduacionActualizable = Omit<
 >
 
 /**
- * Una entrada del catálogo de códigos QR ya cargados (sección 6.4 y 9.3 de
- * requerimientos/diseño). El QR es único por evento y se asocia
- * automáticamente por folio, usado como nombre de archivo esperado.
+ * Una entrada del catálogo de folios: sirve para registrar folios que ya
+ * existen (eventos anteriores o externos al sistema) y para corregir un
+ * folio autogenerado. El folio es único.
  */
-export interface QrCatalogoEntry {
+export interface FolioCatalogoEntry {
   id: number
-  folioEvento: string
-  rutaArchivo: string
-  fechaCarga: string
+  folio: string
+  nombreReferencia: string | null
+  fechaRegistro: string
 }
 
-export type QrCatalogoEntryNuevo = Omit<QrCatalogoEntry, 'id' | 'fechaCarga'>
+export type FolioCatalogoEntryNuevo = Omit<FolioCatalogoEntry, 'id' | 'fechaRegistro'>

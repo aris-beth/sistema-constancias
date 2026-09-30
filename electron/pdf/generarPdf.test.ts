@@ -24,7 +24,6 @@ const evento: Evento = {
   tipoPlantilla: 'regular',
   generacion: null,
   carrera: null,
-  rutaQr: null,
 }
 
 function textoDeLongitud(longitud: number): string {
@@ -71,22 +70,6 @@ describe('generarPdf', () => {
 
     expect(html).toContain('class="cuerpo"')
     expect(html).toContain('class="cuerpo-destacado"')
-  })
-
-  it('renderiza el QR en su celda cuando el evento tiene ruta', () => {
-    const html = crearPaginaRegular(
-      documento(),
-      sello,
-      { ...evento, rutaQr: 'C:/qrs/EVT-001.png' },
-    )
-
-    expect(html).toContain('class="qr"><img src="file:///C:/qrs/EVT-001.png"')
-  })
-
-  it('deja vacía la celda del QR cuando no hay ruta asociada', () => {
-    const html = crearPaginaRegular(documento(), sello, evento)
-
-    expect(html).toContain('<div class="qr"></div>')
   })
 })
 

@@ -3,12 +3,12 @@ import { Badge, Button, Card, Field } from './components/UI'
 import type {
   ConfiguracionFirmantesGraduacion,
   ConfiguracionSello,
-  QrCatalogoEntry,
+  FolioCatalogoEntry,
 } from '../shared/types/configuracion'
 
 interface Props {
   onVolver: () => void
-  onAbrirQrs: () => void
+  onAbrirFolios: () => void
 }
 
 function rutaImagen(ruta: string | null): string | undefined {
@@ -20,14 +20,15 @@ function VistaImagen({ ruta, alt }: { ruta: string | null; alt: string }): JSX.E
   return src ? <img className="image-preview" src={src} alt={alt} /> : <span className="image-placeholder">Sin imagen seleccionada</span>
 }
 
-export default function EditorConfiguracion({ onVolver, onAbrirQrs }: Props) {
+export default function EditorConfiguracion({ onVolver, onAbrirFolios }: Props) {
   const [sello, setSello] = useState<ConfiguracionSello | null>(null)
   const [firmantes, setFirmantes] = useState<ConfiguracionFirmantesGraduacion | null>(null)
-  const [qrs, setQrs] = useState<QrCatalogoEntry[]>([])
-  const [folioQr, setFolioQr] = useState('')
+  const [folios, setFolios] = useState<FolioCatalogoEntry[]>([])
+  const [folioNuevo, setFolioNuevo] = useState('')
+  const [referenciaNueva, setReferenciaNueva] = useState('')
   const [cargando, setCargando] = useState(true)
   const [guardando, setGuardando] = useState(false)
-  const [cargandoQr, setCargandoQr] = useState(false)
+  const [registrandoFolio, setRegistrandoFolio] = useState(false)
   const [mensaje, setMensaje] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -40,7 +41,7 @@ export default function EditorConfiguracion({ onVolver, onAbrirQrs }: Props) {
       const inicial = await window.electronAPI.obtenerConfiguracion()
       setSello(inicial.sello)
       setFirmantes(inicial.firmantesGraduacion)
-      setQrs(inicial.qrs)
+      setFolios(inicial.folios)
     } catch (errorActual) {
       setError(errorActual instanceof Error ? errorActual.message : String(errorActual))
     } finally {
@@ -93,21 +94,23 @@ export default function EditorConfiguracion({ onVolver, onAbrirQrs }: Props) {
     }
   }
 
-  async function cargarQr(): Promise<void> {
-    setCargandoQr(true)
+  async function registrarFolio(): Promise<void> {
+    setRegistrandoFolio(true)
     setError(null)
     setMensaje(null)
     try {
-      const qr = await window.electronAPI.registrarQr({ folioEvento: folioQr })
-      if (qr) {
-        setQrs(await window.electronAPI.listarQrs())
-        setFolioQr('')
-        setMensaje(`QR cargado para ${qr.folioEvento}.`)
-      }
+      const registrado = await window.electronAPI.registrarFolio({
+        folio: folioNuevo,
+        nombreReferencia: referenciaNueva.trim() || null,
+      })
+      setFolios(await window.electronAPI.listarFolios())
+      setFolioNuevo('')
+      setReferenciaNueva('')
+      setMensaje(`Folio ${registrado.folio} registrado.`)
     } catch (errorActual) {
       setError(errorActual instanceof Error ? errorActual.message : String(errorActual))
     } finally {
-      setCargandoQr(false)
+      setRegistrandoFolio(false)
     }
   }
 
@@ -152,13 +155,13 @@ export default function EditorConfiguracion({ onVolver, onAbrirQrs }: Props) {
           </Card>
 
           <Card>
-            <div className="section-heading"><div><h3>Códigos QR</h3><p>Asocia un código QR con el folio del evento.</p></div><Badge tone="neutral">{qrs.length} registrados</Badge></div>
-            <div className="qr-form"><Field label="Folio asociado"><input value={folioQr} onChange={(evento) => setFolioQr(evento.target.value)} placeholder="Ej. EVT-2026-001" /></Field><Button type="button" onClick={() => void cargarQr()} disabled={cargandoQr || !folioQr.trim()}>{cargandoQr ? 'Cargando QR...' : 'Cargar nuevo QR'}</Button></div>
-            {qrs.length > 0 && <div className="table-wrap"><table><thead><tr><th>Folio</th><th>Archivo</th><th>Fecha de carga</th></tr></thead><tbody>{qrs.map((qr) => <tr key={qr.id}><td>{qr.folioEvento}</td><td>{qr.rutaArchivo}</td><td>{qr.fechaCarga}</td></tr>)}</tbody></table></div>}
+            <div className="section-heading"><div><h3>Catálogo de folios</h3><p>Registra folios ya existentes. Los folios nuevos se generan automáticamente.</p></div><Badge tone="neutral">{folios.length} registrados</Badge></div>
+            <div className="folio-form"><Field label="Folio"><input value={folioNuevo} onChange={(evento) => setFolioNuevo(evento.target.value)} placeholder="Ej. EFAC-2026-001" /></Field><Field label="Referencia (opcional)"><input value={referenciaNueva} onChange={(evento) => setReferenciaNueva(evento.target.value)} placeholder="Nombre del evento" /></Field><Button type="button" onClick={() => void registrarFolio()} disabled={registrandoFolio || !folioNuevo.trim()}>{registrandoFolio ? 'Registrando...' : 'Registrar folio'}</Button></div>
+            {folios.length > 0 && <div className="table-wrap"><table><thead><tr><th>Folio</th><th>Referencia</th><th>Fecha de registro</th></tr></thead><tbody>{folios.slice(0, 5).map((folio) => <tr key={folio.id}><td>{folio.folio}</td><td>{folio.nombreReferencia ?? '—'}</td><td>{folio.fechaRegistro}</td></tr>)}</tbody></table></div>}
           </Card>
         </main>
 
-        <aside className="editor-actions"><Card className="action-card"><Button type="button" onClick={() => void guardarCambios()} disabled={guardando}>{guardando ? 'Guardando...' : 'Guardar cambios'}</Button><div className="preview-actions"><Button variant="secondary" type="button" onClick={() => mostrarMensajeVistaPrevia('Vista previa de constancia regular')}>Vista previa de constancia regular</Button><Button variant="secondary" type="button" onClick={() => mostrarMensajeVistaPrevia('Vista previa de reconocimiento graduación')}>Vista previa de reconocimiento graduación</Button><Button variant="text" type="button" onClick={onAbrirQrs}>Vista previa de códigos QR</Button></div></Card></aside>
+        <aside className="editor-actions"><Card className="action-card"><Button type="button" onClick={() => void guardarCambios()} disabled={guardando}>{guardando ? 'Guardando...' : 'Guardar cambios'}</Button><div className="preview-actions"><Button variant="secondary" type="button" onClick={() => mostrarMensajeVistaPrevia('Vista previa de constancia regular')}>Vista previa de constancia regular</Button><Button variant="secondary" type="button" onClick={() => mostrarMensajeVistaPrevia('Vista previa de reconocimiento graduación')}>Vista previa de reconocimiento graduación</Button><Button variant="text" type="button" onClick={onAbrirFolios}>Catálogo de folios (ver y editar)</Button></div></Card></aside>
       </div>
     </div>
   )

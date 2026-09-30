@@ -10,7 +10,6 @@ export interface Evento {
   tipoPlantilla: TipoPlantilla
   generacion: string | null
   carrera: string | null
-  rutaQr: string | null
 }
 
 // Para crear un evento nuevo todavía no existe el id (lo asigna SQLite).

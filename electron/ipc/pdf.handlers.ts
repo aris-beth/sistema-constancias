@@ -3,7 +3,6 @@ import { obtenerBaseDeDatos } from '../db/connection'
 import { obtenerEventoPorFolio } from '../db/repositories/evento.repository'
 import { obtenerConfiguracionSello } from '../db/repositories/configuracionSello.repository'
 import { obtenerConfiguracionFirmantesGraduacion } from '../db/repositories/configuracionFirmantesGraduacion.repository'
-import { buscarQrPorFolio } from '../db/repositories/qrCatalogo.repository'
 import { calcularEncabezadosPorFila } from '../business/calcularEncabezados'
 import { carpetaResources, generarPdfsPorRol, type GrupoPdf } from '../pdf/generarPdf'
 import {
@@ -66,7 +65,7 @@ async function generarPrevisualizacion(entrada: PrevisualizarEntrada): Promise<s
       fecha: fila.fecha,
       ...opcionesCuerpoGraduacion(fila.generacion, fila.carrera),
     }
-    const { recursos } = await armarRecursos(carpetaResources(), null, null)
+    const { recursos } = await armarRecursos(carpetaResources(), null)
     return crearHtmlDocumento(
       [crearPaginaGraduacion(documento, obtenerConfiguracionFirmantesGraduacion())],
       recursos,
@@ -91,8 +90,7 @@ async function generarPrevisualizacion(entrada: PrevisualizarEntrada): Promise<s
     fecha: fila.fechaConstancia,
   }
   const sello = obtenerConfiguracionSello()
-  const rutaQr = folio ? (buscarQrPorFolio(folio)?.rutaArchivo ?? null) : null
-  const { recursos } = await armarRecursos(carpetaResources(), rutaQr, sello)
+  const { recursos } = await armarRecursos(carpetaResources(), sello)
   return crearHtmlDocumento([crearPaginaRegular(documento, sello)], recursos, { previsualizacion: true })
 }
 
@@ -163,13 +161,8 @@ export function registrarManejadorGenerarPdfs(): void {
 
       const advertencias = [...resultado.advertencias]
       if (!esGraduacion) {
-        if (!evento.rutaQr) {
-          advertencias.push(
-            `No se encontró el QR para el folio ${evento.folio}. Los documentos salieron sin QR; puedes cargarlo en el Editor de sellos/QR.`,
-          )
-        }
         if (!(sello.nombreFirmante ?? sello.nombreDirectora)?.trim()) {
-          advertencias.push('La configuración de firma no tiene nombre de firmante; revisa el Editor de sellos/QR.')
+          advertencias.push('La configuración de firma no tiene nombre de firmante; revisa el Editor de plantillas.')
         }
       }
 

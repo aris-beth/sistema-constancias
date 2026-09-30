@@ -1,13 +1,14 @@
 import { ipcMain } from 'electron'
 import { guardarLoteRegular } from '../db/repositories/lote.repository'
-import type { GuardarLoteEntrada, GuardarLoteResultado } from '../../shared/types/ipc'
+import { generarFolioAutomatico } from '../db/repositories/folio.repository'
+import type { GuardarLoteEntrada, GuardarLoteResultado, PrevisualizarFolioEntrada } from '../../shared/types/ipc'
 
 function validarEntrada(entrada: GuardarLoteEntrada): void {
   if (!entrada || typeof entrada !== 'object') {
     throw new Error('La solicitud de guardado no es válida.')
   }
-  if (typeof entrada.folioEvento !== 'string' || !entrada.folioEvento.trim()) {
-    throw new Error('El folio del evento es obligatorio.')
+  if (entrada.folioEvento != null && typeof entrada.folioEvento !== 'string') {
+    throw new Error('El folio del evento no es válido.')
   }
   if (!Array.isArray(entrada.filas)) {
     throw new Error('La solicitud no contiene filas para guardar.')
@@ -26,4 +27,16 @@ export function registrarManejadorGuardarLote(): void {
       }
     },
   )
+
+  // Vista previa (sin guardar nada) del folio que se generaría para un evento.
+  ipcMain.handle('folio:previsualizar', (_evento, entrada: PrevisualizarFolioEntrada): string | null => {
+    const nombre = entrada?.nombreEvento?.trim()
+    const fecha = entrada?.fecha?.trim()
+    if (!nombre || !fecha) return null
+    try {
+      return generarFolioAutomatico(nombre, fecha)
+    } catch {
+      return null // fecha sin año reconocible, etc.
+    }
+  })
 }

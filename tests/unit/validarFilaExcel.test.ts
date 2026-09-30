@@ -79,6 +79,24 @@ describe('validarFilaExcel', () => {
     },
   )
 
+  it('acepta la fecha en el formato español que se muestra en la tabla', () => {
+    expect(
+      validarFilaExcel(
+        { ...filaBase, fechaConstancia: '18 de Septiembre de 2026' },
+        ['Organizador'],
+      ),
+    ).toEqual({ valida: true, errores: [] })
+  })
+
+  it('acepta meses en minúsculas y con acentos al validar la fecha mostrada', () => {
+    expect(
+      validarFilaExcel(
+        { ...filaBase, fechaConstancia: '10 de diciembre de 2025' },
+        ['Organizador'],
+      ),
+    ).toEqual({ valida: true, errores: [] })
+  })
+
   it('rechaza fechas imposibles aunque tengan apariencia válida', () => {
     const resultado = validarFilaExcel(
       { ...filaBase, fechaConstancia: '31/02/2026' },
@@ -88,5 +106,4 @@ describe('validarFilaExcel', () => {
       resultado.errores).toContain('Fila 2: la fecha de la constancia no es válida.')
   })  
 })
-
 

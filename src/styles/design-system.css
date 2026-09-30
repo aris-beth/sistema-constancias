@@ -60,6 +60,7 @@ body {
 
 .content-area {
   flex: 1;
+  min-width: 0; /* una tabla ancha no debe empujar fuera de la pantalla los botones laterales */
   max-width: 1000px;
   margin: 0 auto;
   background-color: var(--color-superficie);
@@ -71,10 +72,15 @@ body {
 }
 
 .nav-lateral {
+  flex: 0 0 100px;
   width: 100px;
   display: flex;
   justify-content: center;
   align-items: center;
+  /* Posición fija en pantalla aunque el contenido crezca o se desplace */
+  position: sticky;
+  top: 45vh;
+  align-self: flex-start;
 }
 
 /* --- Componente: BarraNavegacionPrincipal --- */
@@ -266,9 +272,10 @@ body {
 /* --- Pantalla de Validación (T-UI3) --- */
 .validacion-layout {
   display: flex;
+  flex-direction: column;
   gap: 24px;
   height: 100%;
-  align-items: flex-start;
+  align-items: stretch;
 }
 
 .validacion-main {
@@ -443,6 +450,28 @@ body {
   color: var(--color-texto-secundario);
 }
 
+.editor-field--ancho { grid-column: span 2; }
+
+.editor-textarea--nombre { min-height: 44px; resize: vertical; }
+
+.evento-info {
+  background-color: var(--color-fondo);
+  padding: 16px;
+  border-radius: var(--radio-componente);
+  border: 1px solid var(--color-borde);
+}
+
+.evento-info-campo { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.evento-info-campo .input-institucional { flex: 1; min-width: 240px; }
+.evento-nombre-fijo { font-weight: 600; }
+.evento-ayuda { flex-basis: 100%; font-size: 0.8rem; color: var(--color-texto-secundario); }
+.evento-advertencia { flex-basis: 100%; font-size: 0.85rem; color: var(--color-error); }
+.folio-sugerido { font-size: 0.85rem; color: var(--color-texto-secundario); }
+.cambios-pendientes { font-size: 0.85rem; color: var(--color-error); }
+.mensaje-actualizacion { margin: 0; font-size: 0.9rem; color: var(--color-texto-secundario); }
+.btn-institucional:disabled { opacity: 0.5; cursor: not-allowed; }
+.folio-input-container { flex-wrap: wrap; }
+
 .editor-textarea {
   min-height: 120px;
   resize: both;
@@ -452,7 +481,8 @@ body {
 
 /* Panel de Errores */
 .panel-errores {
-  width: 320px;
+  width: 100%;
+  box-sizing: border-box;
   background-color: var(--color-error-fondo);
   border: 1px solid var(--color-error-borde);
   border-radius: var(--radio-componente);
@@ -460,8 +490,14 @@ body {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  max-height: 600px;
+  max-height: 280px;
   overflow-y: auto;
+}
+
+.panel-errores-lista {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
 }
 
 .panel-errores-titulo {
@@ -797,22 +833,18 @@ body {
 .image-grid { margin-bottom: 24px; }
 .image-control { display: grid; gap: 8px; padding: 16px; border: 1px dashed var(--color-borde); border-radius: var(--radio-input); background: #FBFDFF; }
 .image-preview, .image-placeholder { display: grid; place-items: center; width: 100%; height: 112px; border-radius: var(--radio-input); background: var(--color-institucional-light); color: var(--color-texto-secundario); object-fit: contain; }
-.qr-form { display: flex; align-items: end; gap: 16px; margin-bottom: 16px; }
-.qr-form .field { flex: 1; }
+.folio-form { display: flex; align-items: end; gap: 16px; margin-bottom: 16px; }
+.folio-form .field { flex: 1; }
 
 @media (max-width: 720px) {
   .app-shell { width: min(100% - 24px, 1600px); padding-top: 24px; }
   .editor-layout, .image-grid, .form-grid { grid-template-columns: 1fr; }
   .editor-actions { position: static; }
-  .qr-form { align-items: stretch; flex-direction: column; }
+  .folio-form { align-items: stretch; flex-direction: column; }
 }
 
-.qr-gallery-header, .stats-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
-.qr-gallery-header p, .stats-header p { color: var(--color-texto-secundario); }
-.qr-gallery-grid { display: grid; grid-template-columns: repeat(4, minmax(150px, 1fr)); gap: 16px; }
-.qr-card { display: grid; gap: 12px; aspect-ratio: 1; align-content: center; justify-items: center; text-align: center; }
-.qr-image-frame { display: grid; place-items: center; width: min(100%, 180px); aspect-ratio: 1; padding: 12px; border: 1px solid var(--color-borde); border-radius: var(--radio-input); background: #fff; }
-.qr-image-frame img { width: 100%; height: 100%; object-fit: contain; }
+.catalogo-header, .stats-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
+.catalogo-header p, .stats-header p { color: var(--color-texto-secundario); }
 .stats-filters { display: grid; gap: 20px; }
 .stats-filter-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
 .comparison-inputs { border-top: 1px solid var(--color-borde); padding-top: 20px; }
@@ -833,11 +865,10 @@ body {
 .stats-chart { width: 100%; max-height: 280px; }
 
 @media (max-width: 900px) {
-  .qr-gallery-grid { grid-template-columns: repeat(3, minmax(140px, 1fr)); }
   .stats-kpis, .stats-columns, .comparison-inputs .stats-filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 600px) {
-  .qr-gallery-grid, .stats-kpis, .stats-columns, .stats-filter-grid, .comparison-inputs .stats-filter-grid, .comparison-results { grid-template-columns: 1fr; }
-  .qr-gallery-header, .stats-header { flex-direction: column; }
+  .stats-kpis, .stats-columns, .stats-filter-grid, .comparison-inputs .stats-filter-grid, .comparison-results { grid-template-columns: 1fr; }
+  .catalogo-header, .stats-header { flex-direction: column; }
 }

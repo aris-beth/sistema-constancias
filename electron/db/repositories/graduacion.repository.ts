@@ -1,42 +1,6 @@
 import { obtenerBaseDeDatos } from '../connection'
 import type { GuardarGraduacionResultado, FilaProcesadaGraduacion } from '../../../shared/types/ipc'
-
-function normalizarClave(valor: string): string {
-  return valor.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase()
-}
-
-function obtenerAnio(fecha: string): string {
-  const coincidencia = fecha.match(/(?:^|\/|-)(\d{4})$/) ?? fecha.match(/\b(\d{4})\b/)
-  if (!coincidencia) throw new Error(`No se pudo obtener el año de la fecha "${fecha}".`)
-  return coincidencia[1]
-}
-
-function obtenerIniciales(nombreEvento: string): string {
-  const palabrasIgnoradas = new Set(['DE', 'DEL', 'LA', 'LAS', 'EL', 'LOS', 'Y', 'EN'])
-  const palabras = normalizarClave(nombreEvento)
-    .replace(/[^A-Z0-9 ]/g, ' ')
-    .split(/\s+/)
-    .filter((palabra) => palabra && !palabrasIgnoradas.has(palabra))
-  const iniciales = palabras.map((palabra) => palabra[0]).join('').slice(0, 8)
-  return iniciales || 'GRAD'
-}
-
-export function generarFolioGraduacion(
-  db: ReturnType<typeof obtenerBaseDeDatos>,
-  nombreEvento: string,
-  fecha: string,
-): string {
-  const prefijo = `${obtenerIniciales(nombreEvento)}-${obtenerAnio(fecha)}`
-  const usados = new Set<string>()
-  const eventos = db.prepare('SELECT folio FROM evento').all() as Array<{ folio: string }>
-  const qrs = db.prepare('SELECT folio_evento FROM qr_catalogo').all() as Array<{ folio_evento: string }>
-  for (const evento of eventos) usados.add(evento.folio)
-  for (const qr of qrs) usados.add(qr.folio_evento)
-
-  let lote = 1
-  while (usados.has(`${prefijo}-${String(lote).padStart(3, '0')}`)) lote += 1
-  return `${prefijo}-${String(lote).padStart(3, '0')}`
-}
+import { generarFolioAutomatico } from './folio.repository'
 
 export function guardarLoteGraduacion(
   folioSolicitado: string | null,
@@ -52,18 +16,15 @@ export function guardarLoteGraduacion(
   const primera = validas[0]
   const nombreEvento = `Reconocimientos de graduación ${primera.generacion}`
   const db = obtenerBaseDeDatos()
-  const folio = folioSolicitado?.trim() || generarFolioGraduacion(db, nombreEvento, primera.fecha)
+  const folio = folioSolicitado?.trim() || generarFolioAutomatico(nombreEvento, primera.fecha)
   if (db.prepare('SELECT id FROM evento WHERE folio = ?').get(folio)) {
     throw new Error(`Ya existe un evento registrado con el folio "${folio}".`)
-  }
-  if (db.prepare('SELECT id FROM qr_catalogo WHERE folio_evento = ?').get(folio)) {
-    throw new Error(`El folio "${folio}" ya está asociado a un código QR.`)
   }
 
   const transaccion = db.transaction(() => {
     const evento = db.prepare(
-      `INSERT INTO evento (folio, nombre_evento, fecha_constancia, modalidad, tipo_plantilla, generacion, carrera, ruta_qr)
-       VALUES (?, ?, ?, 'Otro', 'graduacion', ?, ?, NULL)`,
+      `INSERT INTO evento (folio, nombre_evento, fecha_constancia, modalidad, tipo_plantilla, generacion, carrera)
+       VALUES (?, ?, ?, 'Otro', 'graduacion', ?, ?)`,
     ).run(folio, nombreEvento, primera.fecha, primera.generacion, primera.carrera)
     const eventoId = Number(evento.lastInsertRowid)
     const roles = new Map<string, number>()

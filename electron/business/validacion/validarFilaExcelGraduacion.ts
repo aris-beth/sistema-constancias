@@ -1,4 +1,5 @@
 import type { FilaExcelCrudaGraduacion } from '../../../shared/types/excel'
+import { tieneFechaConstanciaValida } from './validarFilaExcel'
 
 export interface ResultadoValidacionFilaGraduacion {
   valida: boolean
@@ -12,17 +13,6 @@ function normalizarClave(valor: string): string {
     .replace(/\s+/g, ' ')
     .trim()
     .toUpperCase()
-}
-
-function fechaValida(valor: string): boolean {
-  const iso = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(valor.trim())
-  const latino = /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/.exec(valor.trim())
-  const anio = iso ? Number(iso[1]) : latino ? Number(latino[3]) : NaN
-  const mes = iso ? Number(iso[2]) : latino ? Number(latino[2]) : NaN
-  const dia = iso ? Number(iso[3]) : latino ? Number(latino[1]) : NaN
-  if (![anio, mes, dia].every(Number.isInteger)) return false
-  const fecha = new Date(Date.UTC(anio, mes - 1, dia))
-  return fecha.getUTCFullYear() === anio && fecha.getUTCMonth() === mes - 1 && fecha.getUTCDate() === dia
 }
 
 export function validarFilaExcelGraduacion(
@@ -39,6 +29,8 @@ export function validarFilaExcelGraduacion(
   }
   if (!fila.generacion.trim()) errores.push(`${prefijo}: falta la generación.`)
   if (!fila.carrera.trim()) errores.push(`${prefijo}: falta la carrera.`)
-  if (!fechaValida(fila.fecha)) errores.push(`${prefijo}: la fecha de graduación no es válida.`)
+  if (!tieneFechaConstanciaValida(fila.fecha)) {
+    errores.push(`${prefijo}: la fecha de graduación no es válida.`)
+  }
   return { valida: errores.length === 0, errores }
 }

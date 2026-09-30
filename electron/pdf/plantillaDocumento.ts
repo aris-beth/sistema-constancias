@@ -14,7 +14,7 @@ import { esUniversidadBUAP } from '../business/instituciones'
  *   - Página carta horizontal (11 x 8.5 in), definida en @page y en las
  *     opciones de printToPDF.
  *
- * Todas las imágenes (logo, QR, firma, sello) y las fuentes se incrustan como
+ * Todas las imágenes (logo, firma, sello) y las fuentes se incrustan como
  * data URI dentro del <style>: así el HTML funciona igual cargado desde un
  * archivo temporal (PDF) o desde un iframe srcDoc (previsualización), sin
  * depender de rutas file:// ni de permisos del renderer.
@@ -44,7 +44,6 @@ export interface RecursosDocumento {
   fuentesCss: string
   /** data URI del logo institucional (o null si no se encontró el archivo). */
   logo: string | null
-  qr: string | null
   firma: string | null
   sello: string | null
 }
@@ -52,7 +51,6 @@ export interface RecursosDocumento {
 export const RECURSOS_VACIOS: RecursosDocumento = {
   fuentesCss: '',
   logo: null,
-  qr: null,
   firma: null,
   sello: null,
 }
@@ -202,7 +200,7 @@ export function crearPaginaRegular(documento: DatosDocumentoPdf, sello: Configur
   const cargoFirmante = sello.cargoFirmante ?? 'Directora'
 
   return `<section class="pagina">
-    <div class="col-izq"><div class="logo"></div><div class="qr-bloque"><div class="qr"></div><div class="folio">Folio: ${escaparHtml(documento.folioInterno)}</div></div></div>
+    <div class="col-izq"><div class="logo"></div><div class="folio-bloque"><div class="folio">Folio: ${escaparHtml(documento.folioInterno)}</div></div></div>
     <div class="barra"></div>
     <div class="col-der">
       ${encabezadoInstitucional(documento.encabezado)}
@@ -297,9 +295,9 @@ export function crearHtmlDocumento(
       /* Columna del logo + barra vertical (medidas tomadas de la plantilla) */
       .col-izq { position: absolute; left: 0.2in; top: 1.17in; width: 2.5in; height: 6.18in; display: flex; flex-direction: column; justify-content: space-between; align-items: center; }
       .logo { width: 2.46in; aspect-ratio: 292 / 386; background-repeat: no-repeat; background-position: center; background-size: contain; }
-      .qr-bloque { display: flex; flex-direction: column; align-items: center; gap: 0.05in; }
-      .qr { width: 1.05in; height: 1.05in; background-repeat: no-repeat; background-position: center; background-size: contain; }
-      .folio { font-size: 8pt; }
+      /* Folio en la parte baja de la columna izquierda. */
+      .folio-bloque { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; width: 100%; min-height: 1.05in; }
+      .folio { font-size: 10pt; font-weight: 600; text-align: center; overflow-wrap: anywhere; }
       .barra { position: absolute; left: 2.82in; top: 1.17in; width: 0.055in; height: 6.18in; background: #244061; }
 
       /* Columna de contenido: todo centrado */
@@ -338,7 +336,6 @@ export function crearHtmlDocumento(
       .graduacion .cuerpo { font-size: 13.5pt; line-height: 1.3; margin-top: 0.065in; }
 
       ${reglaImagen('.logo', recursos.logo)}
-      ${reglaImagen('.qr', recursos.qr)}
       ${reglaImagen('.firma-img', recursos.firma)}
       ${reglaImagen('.sello', recursos.sello)}
       ${estilosPreview}

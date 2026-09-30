@@ -10,8 +10,7 @@ CREATE TABLE IF NOT EXISTS evento (
   modalidad TEXT NOT NULL CHECK (modalidad IN ('Presencial CU', 'Presencial CU2', 'En línea', 'Otro')),
   tipo_plantilla TEXT NOT NULL CHECK (tipo_plantilla IN ('regular', 'graduacion')),
   generacion TEXT,
-  carrera TEXT,
-  ruta_qr TEXT
+  carrera TEXT
 );
 
 CREATE TABLE IF NOT EXISTS participante (
@@ -79,11 +78,11 @@ CREATE TABLE IF NOT EXISTS configuracion_firmantes_graduacion (
   fecha_actualizacion TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS qr_catalogo (
+CREATE TABLE IF NOT EXISTS folio_catalogo (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  folio_evento TEXT UNIQUE NOT NULL,
-  ruta_archivo TEXT NOT NULL,
-  fecha_carga TEXT NOT NULL
+  folio TEXT UNIQUE NOT NULL,
+  nombre_referencia TEXT,
+  fecha_registro TEXT NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_constancia_evento ON constancia(evento_id);

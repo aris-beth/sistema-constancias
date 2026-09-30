@@ -12,4 +12,4 @@ Eliminado: `electron/pdf/generarPdf.test.ts` (reemplazado por `plantillaDocument
 
 ## Pendiente
 - Reemplazar `resources/logo-buap.png` (recortado de la plantilla) por el SVG oficial: `resources/logo-buap.svg` tiene prioridad.
-- Confirmar el diseño de la constancia regular (posición de QR, firma y sello es un supuesto).
+- Confirmar el diseño de la constancia regular (posición de firma y sello es un supuesto).

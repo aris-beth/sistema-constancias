@@ -7,11 +7,17 @@ import {
   actualizarConfiguracionSello,
   obtenerConfiguracionSello,
 } from '../db/repositories/configuracionSello.repository'
-import { listarQrsCargados, registrarQr } from '../db/repositories/qrCatalogo.repository'
+import {
+  actualizarFolioCatalogo,
+  eliminarFolioCatalogo,
+  listarFoliosCatalogo,
+  registrarFolioCatalogo,
+} from '../db/repositories/folio.repository'
 import type {
   ConfiguracionFirmantesGraduacionEntrada,
   ConfiguracionSelloEntrada,
-  RegistrarQrEntrada,
+  ActualizarFolioEntrada,
+  RegistrarFolioEntrada,
 } from '../../shared/types/ipc'
 
 const filtroImagenes = [{ name: 'Imágenes', extensions: ['png', 'jpg', 'jpeg', 'webp'] }]
@@ -20,7 +26,7 @@ export function registrarManejadoresConfiguracion(): void {
   ipcMain.handle('configuracion:obtener', () => ({
     sello: obtenerConfiguracionSello(),
     firmantesGraduacion: obtenerConfiguracionFirmantesGraduacion(),
-    qrs: listarQrsCargados(),
+    folios: listarFoliosCatalogo(),
   }))
 
   ipcMain.handle('configuracion:seleccionarFirma', async () => {
@@ -49,18 +55,12 @@ export function registrarManejadoresConfiguracion(): void {
     (_evento, entrada: ConfiguracionFirmantesGraduacionEntrada) =>
       actualizarConfiguracionFirmantesGraduacion(entrada),
   )
-  ipcMain.handle('configuracion:registrarQr', async (_evento, entrada: RegistrarQrEntrada) => {
-    const folioEvento = entrada?.folioEvento?.trim()
-    if (!folioEvento) throw new Error('El folio del evento es obligatorio para cargar un QR.')
-
-    const seleccion = await dialog.showOpenDialog({
-      title: 'Selecciona la imagen del código QR',
-      properties: ['openFile'],
-      filters: filtroImagenes,
-    })
-    if (seleccion.canceled || seleccion.filePaths.length === 0) return null
-
-    return registrarQr({ folioEvento, rutaArchivo: seleccion.filePaths[0] })
-  })
-  ipcMain.handle('configuracion:listarQrs', () => listarQrsCargados())
+  ipcMain.handle('configuracion:listarFolios', () => listarFoliosCatalogo())
+  ipcMain.handle('configuracion:registrarFolio', (_evento, entrada: RegistrarFolioEntrada) =>
+    registrarFolioCatalogo({ folio: entrada?.folio ?? '', nombreReferencia: entrada?.nombreReferencia ?? null }),
+  )
+  ipcMain.handle('configuracion:actualizarFolio', (_evento, entrada: ActualizarFolioEntrada) =>
+    actualizarFolioCatalogo(entrada?.id, { folio: entrada?.folio ?? '', nombreReferencia: entrada?.nombreReferencia ?? null }),
+  )
+  ipcMain.handle('configuracion:eliminarFolio', (_evento, id: number) => eliminarFolioCatalogo(id))
 }

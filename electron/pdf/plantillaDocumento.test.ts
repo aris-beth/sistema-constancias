@@ -70,7 +70,7 @@ describe('plantillaDocumento', () => {
     expect(html).toContain('class="cuerpo" style="font-size: 11pt"')
   })
 
-  it('la constancia regular lleva un solo firmante y el folio bajo el QR', () => {
+  it('la constancia regular lleva un solo firmante y el folio', () => {
     const html = crearPaginaRegular(documento(), sello)
     expect(html).toContain('Firma de prueba')
     expect(html).toContain('Cargo de prueba')
@@ -78,11 +78,11 @@ describe('plantillaDocumento', () => {
     expect(html.match(/<div class="firma">/g)).toHaveLength(1)
   })
 
-  it('la graduación imprime dos firmantes y ninguna celda de QR', () => {
+  it('la graduación imprime dos firmantes y ningún bloque de folio', () => {
     const html = crearPaginaGraduacion(documento(), firmantes)
     expect(html).toContain('Rector de prueba')
     expect(html).toContain('Director de prueba')
-    expect(html).not.toContain('class="qr"')
+    expect(html).not.toContain('class="folio-bloque"')
   })
 
   it('escapa HTML en nombre y texto', () => {
@@ -94,16 +94,10 @@ describe('plantillaDocumento', () => {
   it('incrusta imágenes y fuentes como data URI y no usa rutas file://', () => {
     const html = crearHtmlDocumento(
       [crearPaginaRegular(documento(), sello)],
-      { ...RECURSOS_VACIOS, qr: 'data:image/png;base64,AAAA', logo: 'data:image/png;base64,BBBB' },
+      { ...RECURSOS_VACIOS, logo: 'data:image/png;base64,BBBB' },
     )
-    expect(html).toContain('.qr{background-image:url("data:image/png;base64,AAAA")}')
     expect(html).toContain('.logo{background-image:url("data:image/png;base64,BBBB")}')
     expect(html).not.toContain('file://')
-  })
-
-  it('sin QR no genera regla de imagen para el QR', () => {
-    const html = crearHtmlDocumento([crearPaginaRegular(documento(), sello)], RECURSOS_VACIOS)
-    expect(html).not.toContain('.qr{background-image')
   })
 
   it('la previsualización se escala a la ventana y el PDF no', () => {

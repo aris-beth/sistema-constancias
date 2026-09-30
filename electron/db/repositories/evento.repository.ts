@@ -12,7 +12,6 @@ interface FilaEvento {
   tipo_plantilla: string
   generacion: string | null
   carrera: string | null
-  ruta_qr: string | null
 }
 
 // Traduce la fila cruda de la base de datos al tipo Evento (camelCase)
@@ -28,7 +27,6 @@ function mapearFila(fila: FilaEvento): Evento {
     tipoPlantilla: fila.tipo_plantilla as Evento['tipoPlantilla'],
     generacion: fila.generacion,
     carrera: fila.carrera,
-    rutaQr: fila.ruta_qr,
   }
 }
 
@@ -37,8 +35,8 @@ export function crearEvento(datos: EventoNuevo): Evento {
 
   try {
     const insertar = db.prepare(`
-      INSERT INTO evento (folio, nombre_evento, fecha_constancia, modalidad, tipo_plantilla, generacion, carrera, ruta_qr)
-      VALUES (@folio, @nombreEvento, @fechaConstancia, @modalidad, @tipoPlantilla, @generacion, @carrera, @rutaQr)
+      INSERT INTO evento (folio, nombre_evento, fecha_constancia, modalidad, tipo_plantilla, generacion, carrera)
+      VALUES (@folio, @nombreEvento, @fechaConstancia, @modalidad, @tipoPlantilla, @generacion, @carrera)
     `)
 
     const resultado = insertar.run({
@@ -49,7 +47,6 @@ export function crearEvento(datos: EventoNuevo): Evento {
       tipoPlantilla: datos.tipoPlantilla,
       generacion: datos.generacion,
       carrera: datos.carrera,
-      rutaQr: datos.rutaQr,
     })
 
     const eventoCreado = obtenerEventoPorId(Number(resultado.lastInsertRowid))
@@ -98,33 +95,4 @@ export function listarEventosPorTipoPlantilla(tipoPlantilla: TipoPlantilla): Eve
     .prepare('SELECT * FROM evento WHERE tipo_plantilla = ? ORDER BY id DESC')
     .all(tipoPlantilla) as FilaEvento[]
   return filas.map(mapearFila)
-}
-
-/**
- * Asocia (o reemplaza) la ruta del QR vinculado a un evento. La usa el
- * asociador de QR (sección 5.6 de requerimientos y sección 9.3 del diseño)
- * cuando encuentra, o cuando la persona operadora carga manualmente desde
- * el Editor de sellos/QR, un archivo cuyo nombre coincide con el folio del
- * evento.
- */
-export function actualizarRutaQr(eventoId: number, rutaQr: string): Evento {
-  const db = obtenerBaseDeDatos()
-
-  if (!rutaQr.trim()) {
-    throw new Error('La ruta del QR no puede estar vacía.')
-  }
-
-  const resultado = db
-    .prepare('UPDATE evento SET ruta_qr = ? WHERE id = ?')
-    .run(rutaQr.trim(), eventoId)
-
-  if (resultado.changes === 0) {
-    throw new Error(`No existe un evento con id ${eventoId} para asociarle un QR.`)
-  }
-
-  const actualizado = obtenerEventoPorId(eventoId)
-  if (!actualizado) {
-    throw new Error(`El evento ${eventoId} se actualizó pero no pudo recuperarse después.`)
-  }
-  return actualizado
 }

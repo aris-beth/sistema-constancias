@@ -78,7 +78,6 @@ export async function generarPdfsPorRol(
 
   const { recursos, advertencias } = await armarRecursos(
     carpetaResources(),
-    esGraduacion ? null : evento.rutaQr,
     esGraduacion ? null : sello,
   )
 

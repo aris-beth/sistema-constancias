@@ -96,7 +96,7 @@ export const PantallaGenerar: React.FC<PantallaGenerarProps> = ({
               </li>
             ))}
 
-            {/* Advertencias (QR o firma faltantes, recursos, etc.) */}
+            {/* Advertencias (firma faltante, recursos, etc.) */}
             {(resultados.advertencias ?? []).map((aviso, idx) => (
               <li key={`aviso-${idx}`} className="bitacora-item">
                 <span className="badge badge-info">Aviso</span>

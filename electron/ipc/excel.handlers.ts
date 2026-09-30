@@ -82,6 +82,18 @@ function procesarFila(
   }
 }
 
+/** Catálogos vigentes (abreviaturas y roles guardados + los del código). */
+function obtenerContextoRegular(): { catalogo: Map<string, string>; roles: Set<string> } {
+  const catalogo = construirMapaAbreviaturas(
+    listarAbreviaturas().map((entrada) => ({
+      formaEncontrada: entrada.formaEncontrada,
+      abreviaturaAceptada: entrada.abreviaturaAceptada,
+    })),
+  )
+  const roles = new Set([...ROLES_RECONOCIDOS, ...listarRoles().map((rol) => rol.nombreRol)])
+  return { catalogo, roles }
+}
+
 /**
  * Registra el canal IPC "excel:cargar". Se llama una sola vez al arrancar
  * la app (ver main.ts) — después, React lo invoca cada vez que la persona
@@ -119,5 +131,13 @@ export function registrarManejadoresExcel(): void {
       nombreArchivo: path.basename(rutaArchivo),
       filas,
     }
+  })
+
+  // Vuelve a validar/normalizar filas ya cargadas después de que la persona
+  // las corrigió en pantalla ("Actualizar cambios").
+  ipcMain.handle('excel:revalidar', (_evento, filas: FilaExcelCruda[]): FilaProcesada[] => {
+    if (!Array.isArray(filas)) throw new Error('La solicitud de revalidación no es válida.')
+    const { catalogo, roles } = obtenerContextoRegular()
+    return filas.map((fila) => procesarFila(fila, catalogo, roles))
   })
 }

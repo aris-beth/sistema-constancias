@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
+import type { FilaExcelCruda, FilaExcelCrudaGraduacion } from '../shared/types/excel'
 import type {
   GuardarLoteEntrada,
   GuardarLoteResultado,
@@ -7,12 +8,16 @@ import type {
   GenerarPdfsEntrada,
   GenerarPdfsResultado,
   PrevisualizarEntrada,
+  PrevisualizarFolioEntrada,
   ResultadoCargaExcel,
   ResultadoCargaGraduacion,
+  FilaProcesada,
+  FilaProcesadaGraduacion,
   ConfiguracionInicial,
   ConfiguracionSelloEntrada,
   ConfiguracionFirmantesGraduacionEntrada,
-  RegistrarQrEntrada,
+  ActualizarFolioEntrada,
+  RegistrarFolioEntrada,
   EstadisticasEntrada,
   EstadisticasResultado,
 } from '../shared/types/ipc'
@@ -27,6 +32,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   cargarExcel: (): Promise<ResultadoCargaExcel | null> => ipcRenderer.invoke('excel:cargar'),
   cargarGraduacion: (): Promise<ResultadoCargaGraduacion | null> =>
     ipcRenderer.invoke('excel:cargarGraduacion'),
+  revalidarFilas: (filas: FilaExcelCruda[]): Promise<FilaProcesada[]> =>
+    ipcRenderer.invoke('excel:revalidar', filas),
+  revalidarFilasGraduacion: (filas: FilaExcelCrudaGraduacion[]): Promise<FilaProcesadaGraduacion[]> =>
+    ipcRenderer.invoke('excel:revalidarGraduacion', filas),
+  previsualizarFolio: (entrada: PrevisualizarFolioEntrada): Promise<string | null> =>
+    ipcRenderer.invoke('folio:previsualizar', entrada),
   guardarLote: (entrada: GuardarLoteEntrada): Promise<GuardarLoteResultado> =>
     ipcRenderer.invoke('excel:guardarLote', entrada),
   guardarGraduacion: (entrada: GuardarGraduacionEntrada): Promise<GuardarGraduacionResultado> =>
@@ -47,9 +58,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('configuracion:actualizarSello', entrada),
   actualizarFirmantesGraduacion: (entrada: ConfiguracionFirmantesGraduacionEntrada) =>
     ipcRenderer.invoke('configuracion:actualizarFirmantesGraduacion', entrada),
-  registrarQr: (entrada: RegistrarQrEntrada) =>
-    ipcRenderer.invoke('configuracion:registrarQr', entrada),
-  listarQrs: () => ipcRenderer.invoke('configuracion:listarQrs'),
+  listarFolios: () => ipcRenderer.invoke('configuracion:listarFolios'),
+  registrarFolio: (entrada: RegistrarFolioEntrada) =>
+    ipcRenderer.invoke('configuracion:registrarFolio', entrada),
+  actualizarFolio: (entrada: ActualizarFolioEntrada) =>
+    ipcRenderer.invoke('configuracion:actualizarFolio', entrada),
+  eliminarFolio: (id: number) => ipcRenderer.invoke('configuracion:eliminarFolio', id),
   consultarEstadisticas: (entrada: EstadisticasEntrada): Promise<EstadisticasResultado> =>
     ipcRenderer.invoke('estadisticas:consultar', entrada),
 })

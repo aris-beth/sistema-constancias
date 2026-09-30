@@ -30,7 +30,7 @@ function mapearFila(fila: FilaConfiguracionSello): ConfiguracionSello {
 /**
  * La tabla `configuracion_sello` es un singleton (siempre la fila id = 1):
  * no existe un "sello por evento", sino una sola configuración vigente que
- * la Coordinación edita desde el Editor de sellos/QR (sección 6.4 de
+ * la Coordinación edita desde el Editor de plantillas (sección 6.4 de
  * requerimientos) y que se reutiliza en todas las constancias regulares
  * que se generen después. La fila la crea `schema.ts` al inicializar la
  * base de datos, así que en operación normal siempre debería existir.

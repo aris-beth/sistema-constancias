@@ -1,5 +1,5 @@
 /**
- * Carga de recursos para las plantillas (fuentes, logo, QR, firma, sello) y
+ * Carga de recursos para las plantillas (fuentes, logo, firma, sello) y
  * conversión a data URI. No depende de Electron: recibe la carpeta
  * `resources/` como parámetro (ver `carpetaResources()` en generarPdf.ts).
  */
@@ -78,17 +78,13 @@ export interface RecursosCompletos {
   advertencias: string[]
 }
 
-/** Recursos base + QR del evento + firma y sello de la configuración vigente. */
+/** Recursos base + firma y sello de la configuración vigente. */
 export async function armarRecursos(
   carpetaResources: string,
-  rutaQr: string | null,
   sello: ConfiguracionSello | null,
 ): Promise<RecursosCompletos> {
   const base = await cargarRecursosBase(carpetaResources)
   const advertencias = [...base.advertencias]
-
-  const qr = rutaQr ? await leerImagenComoDataUri(rutaQr) : null
-  if (rutaQr && !qr) advertencias.push(`No se pudo leer la imagen del QR (${rutaQr}).`)
 
   let firma: string | null = null
   let imagenSello: string | null = null
@@ -103,7 +99,7 @@ export async function armarRecursos(
   }
 
   return {
-    recursos: { fuentesCss: base.fuentesCss, logo: base.logo, qr, firma, sello: imagenSello },
+    recursos: { fuentesCss: base.fuentesCss, logo: base.logo, firma, sello: imagenSello },
     advertencias,
   }
 }

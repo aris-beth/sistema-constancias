@@ -28,13 +28,19 @@ export interface FilaProcesada {
   categoria: string | null
 }
 
+export interface PrevisualizarFolioEntrada {
+  nombreEvento: string
+  fecha: string
+}
+
 export interface ResultadoCargaExcel {
   nombreArchivo: string
   filas: FilaProcesada[]
 }
 
 export interface GuardarLoteEntrada {
-  folioEvento: string
+  /** Si viene vacío/null, el sistema genera el folio automáticamente. */
+  folioEvento: string | null
   filas: FilaProcesada[]
 }
 
@@ -103,14 +109,19 @@ export interface ConfiguracionFirmantesGraduacionEntrada {
   directorCargo: string
 }
 
-export interface RegistrarQrEntrada {
-  folioEvento: string
+export interface RegistrarFolioEntrada {
+  folio: string
+  nombreReferencia: string | null
+}
+
+export interface ActualizarFolioEntrada extends RegistrarFolioEntrada {
+  id: number
 }
 
 export interface ConfiguracionInicial {
   sello: import('./configuracion').ConfiguracionSello
   firmantesGraduacion: import('./configuracion').ConfiguracionFirmantesGraduacion
-  qrs: import('./configuracion').QrCatalogoEntry[]
+  folios: import('./configuracion').FolioCatalogoEntry[]
 }
 
 export interface FiltrosEstadisticas {

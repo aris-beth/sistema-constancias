@@ -1,4 +1,5 @@
 import type { FilaProcesada, FilaProcesadaGraduacion } from '../../shared/types/ipc'
+import type { FilaExcelCruda, FilaExcelCrudaGraduacion } from '../../shared/types/excel'
 import type { RegistroExcel, ErrorValidacion } from '../pantallas/PantallaValidacion'
 
 function textoOpcional(valor: unknown): string | null {
@@ -50,5 +51,32 @@ export function registroAFilaGraduacion(
     textoGenerado: registro.textoGenerado ?? null,
     confianza: registro.confianza ?? null,
     error: errorDeFila(registro, errores),
+  }
+}
+
+/** Fila cruda (lo que el backend valida) a partir de lo que hay en pantalla. */
+export function registroAFilaCruda(registro: RegistroExcel): FilaExcelCruda {
+  return {
+    numeroFila: Number(registro.idFila),
+    nombreCompleto: registro.nombre ?? '',
+    participaComo: registro.rol ?? '',
+    nombrePonencia: textoOpcional(registro.nombrePonencia),
+    nombreEvento: registro.nombreEvento ?? '',
+    fechaConstancia: registro.fechaConstancia ?? '',
+    universidadOrigen: textoOpcional(registro.universidadOrigen),
+    modalidad: registro.modalidad ?? '',
+    textoPersonalizado: textoOpcional(registro.textoPersonalizado),
+    categoria: textoOpcional(registro.categoria),
+  }
+}
+
+export function registroAFilaCrudaGraduacion(registro: RegistroExcel): FilaExcelCrudaGraduacion {
+  return {
+    numeroFila: Number(registro.idFila),
+    nombreCompleto: registro.nombre ?? '',
+    subtipo: registro.rol ?? '',
+    generacion: registro.generacion ?? '',
+    carrera: registro.carrera ?? '',
+    fecha: registro.fechaConstancia ?? '',
   }
 }

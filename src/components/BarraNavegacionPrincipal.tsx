@@ -1,7 +1,7 @@
 import React from 'react';
 import '../styles/design-system.css';
 
-export type VistaActiva = 'constancias' | 'plantillas' | 'metricas' | 'qrs';
+export type VistaActiva = 'constancias' | 'plantillas' | 'metricas' | 'folios';
 
 interface BarraNavegacionProps {
   vistaActiva: VistaActiva;

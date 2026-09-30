@@ -1,9 +1,13 @@
+import type { FilaExcelCruda, FilaExcelCrudaGraduacion } from '../../shared/types/excel'
 import type {
   GuardarGraduacionEntrada,
   GuardarGraduacionResultado,
   GenerarPdfsEntrada,
   GenerarPdfsResultado,
   PrevisualizarEntrada,
+  PrevisualizarFolioEntrada,
+  FilaProcesada,
+  FilaProcesadaGraduacion,
   GuardarLoteEntrada,
   GuardarLoteResultado,
   ResultadoCargaExcel,
@@ -11,14 +15,15 @@ import type {
   ConfiguracionInicial,
   ConfiguracionSelloEntrada,
   ConfiguracionFirmantesGraduacionEntrada,
-  RegistrarQrEntrada,
+  ActualizarFolioEntrada,
+  RegistrarFolioEntrada,
   EstadisticasEntrada,
   EstadisticasResultado,
 } from '../../shared/types/ipc'
 import type {
   ConfiguracionSello,
   ConfiguracionFirmantesGraduacion,
-  QrCatalogoEntry,
+  FolioCatalogoEntry,
 } from '../../shared/types/configuracion'
 
 declare global {
@@ -27,6 +32,9 @@ declare global {
       version: () => string
       cargarExcel: () => Promise<ResultadoCargaExcel | null>
       cargarGraduacion: () => Promise<ResultadoCargaGraduacion | null>
+      revalidarFilas: (filas: FilaExcelCruda[]) => Promise<FilaProcesada[]>
+      revalidarFilasGraduacion: (filas: FilaExcelCrudaGraduacion[]) => Promise<FilaProcesadaGraduacion[]>
+      previsualizarFolio: (entrada: PrevisualizarFolioEntrada) => Promise<string | null>
       guardarLote: (entrada: GuardarLoteEntrada) => Promise<GuardarLoteResultado>
       guardarGraduacion: (entrada: GuardarGraduacionEntrada) => Promise<GuardarGraduacionResultado>
       generarPdfs: (entrada: GenerarPdfsEntrada) => Promise<GenerarPdfsResultado>
@@ -37,8 +45,10 @@ declare global {
       seleccionarImagenSello: () => Promise<string | null>
       actualizarConfiguracionSello: (entrada: ConfiguracionSelloEntrada) => Promise<ConfiguracionSello>
       actualizarFirmantesGraduacion: (entrada: ConfiguracionFirmantesGraduacionEntrada) => Promise<ConfiguracionFirmantesGraduacion>
-      registrarQr: (entrada: RegistrarQrEntrada) => Promise<QrCatalogoEntry | null>
-      listarQrs: () => Promise<QrCatalogoEntry[]>
+      listarFolios: () => Promise<FolioCatalogoEntry[]>
+      registrarFolio: (entrada: RegistrarFolioEntrada) => Promise<FolioCatalogoEntry>
+      actualizarFolio: (entrada: ActualizarFolioEntrada) => Promise<FolioCatalogoEntry>
+      eliminarFolio: (id: number) => Promise<void>
       consultarEstadisticas: (entrada: EstadisticasEntrada) => Promise<EstadisticasResultado>
     }
   }
