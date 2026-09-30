@@ -1,6 +1,7 @@
 import type { FilaExcelCruda } from '../../../shared/types/excel'
+import type { Modalidad } from '../../../shared/types/evento'
 
-const MODALIDADES_VALIDAS = new Set(['Presencial CU', 'Presencial CU2', 'En línea', 'Otro'])
+const MODALIDADES_VALIDAS: Modalidad[] = ['Presencial CU', 'Presencial CU2', 'En línea', 'Otro']
 const CATEGORIAS_VALIDAS = new Set(['Maestro BUAP', 'Alumno BUAP', 'Externo'])
 
 export interface ResultadoValidacionFila {
@@ -30,6 +31,15 @@ function normalizarValorCatalogo(valor: string): string {
     .replace(/\s+/g, ' ')
     .trim()
     .toLocaleUpperCase('es-MX')
+}
+
+export function normalizarModalidad(valor: string): Modalidad {
+  const clave = normalizarValorCatalogo(valor)
+  const modalidad = MODALIDADES_VALIDAS.find(
+    (opcion) => normalizarValorCatalogo(opcion) === clave,
+  )
+  if (!modalidad) throw new Error(`La modalidad "${valor}" no está reconocida.`)
+  return modalidad
 }
 
 function extraerPartesFecha(valor: string): { dia: number; mes: number; anio: number } | null {
@@ -124,10 +134,9 @@ export function validarFilaExcel(
     errores.push(`${prefijo}: la fecha de la constancia no es válida.`)
   }
 
-  const modalidadesNormalizadas = new Set(
-    Array.from(MODALIDADES_VALIDAS, (modalidad) => normalizarValorCatalogo(modalidad)),
-  )
-  if (!modalidadesNormalizadas.has(normalizarValorCatalogo(fila.modalidad))) {
+  try {
+    normalizarModalidad(fila.modalidad)
+  } catch {
     errores.push(`${prefijo}: modalidad '${fila.modalidad}' no reconocida.`)
   }
 

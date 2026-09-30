@@ -10,6 +10,10 @@ function errorDeFila(registro: RegistroExcel, errores: ErrorValidacion[]): strin
   return errores.find((error) => error.idFila === registro.idFila)?.mensaje ?? null
 }
 
+export function actualizarNombreRegistro(registro: RegistroExcel, nombre: string): RegistroExcel {
+  return { ...registro, nombre, nombreOriginal: nombre }
+}
+
 /**
  * Reconstruye la fila que entiende el backend a partir del registro que la
  * UI mantiene (y que el usuario pudo haber editado en la validación).

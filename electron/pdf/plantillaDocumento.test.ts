@@ -147,6 +147,7 @@ describe('plantillaDocumento', () => {
 
   it('omite instituciones vacías y conserva las externas', () => {
     expect(institucionParaDocumento('')).toBeNull()
+    expect(institucionParaDocumento(null)).toBeNull()
     expect(institucionParaDocumento('UNAM')).toBe('UNAM')
   })
 })

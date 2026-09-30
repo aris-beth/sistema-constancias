@@ -13,7 +13,7 @@ function normalizarNombreInstitucion(valor: string): string {
  * Universidad Autónoma de Puebla en los archivos de entrada.
  */
 export function esUniversidadBUAP(universidad: string | null | undefined): boolean {
-  if (!universidad?.trim()) return false
+  if (!universidad?.trim()) return true
 
   const clave = normalizarNombreInstitucion(universidad)
   const compacta = clave.replace(/\s/g, '')

@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { formatearFechaConstancia, validarFilaExcel } from './validarFilaExcel'
+import {
+  formatearFechaConstancia,
+  normalizarModalidad,
+  validarFilaExcel,
+} from './validarFilaExcel'
 import type { FilaExcelCruda } from '../../../shared/types/excel'
 
 const filaValida: FilaExcelCruda = {
@@ -20,6 +24,19 @@ const roles = ['Organizador']
 describe('validarFilaExcel', () => {
   it('acepta una fila 100% válida', () => {
     expect(validarFilaExcel(filaValida, roles)).toEqual({ valida: true, errores: [] })
+  })
+
+  it.each([
+    ['presencial cu', 'Presencial CU'],
+    ['PRESENCIAL CU2', 'Presencial CU2'],
+    ['en linea', 'En línea'],
+    ['otro', 'Otro'],
+  ])('normaliza la modalidad "%s" al valor canónico', (entrada, esperada) => {
+    expect(normalizarModalidad(entrada)).toBe(esperada)
+  })
+
+  it('rechaza una modalidad que no pertenece al catálogo', () => {
+    expect(() => normalizarModalidad('Remota')).toThrow('La modalidad "Remota" no está reconocida.')
   })
 
   it.each([

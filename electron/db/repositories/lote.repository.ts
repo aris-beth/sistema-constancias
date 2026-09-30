@@ -1,10 +1,9 @@
 import { obtenerBaseDeDatos } from '../connection'
 import { orquestarGuardadoLote, type FilaLoteResuelta } from '../../business/orquestarGuardadoLote'
 import { separarParticipantes } from '../../business/separarParticipantes'
-import { normalizarCategoria } from '../../business/validacion/validarFilaExcel'
+import { normalizarCategoria, normalizarModalidad } from '../../business/validacion/validarFilaExcel'
 import { generarFolioAutomatico } from './folio.repository'
 import type { GuardarLoteResultado, FilaProcesada } from '../../../shared/types/ipc'
-import type { Modalidad } from '../../../shared/types/evento'
 
 function normalizarClave(valor: string): string {
   return valor.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toUpperCase()
@@ -53,7 +52,12 @@ export function guardarLoteRegular(
         `INSERT INTO evento (folio, nombre_evento, fecha_constancia, modalidad, tipo_plantilla, generacion, carrera)
          VALUES (?, ?, ?, ?, 'regular', NULL, NULL)`,
       )
-      .run(folio, primera.nombreEvento.trim(), primera.fechaConstancia.trim(), primera.modalidad)
+      .run(
+        folio,
+        primera.nombreEvento.trim(),
+        primera.fechaConstancia.trim(),
+        normalizarModalidad(primera.modalidad),
+      )
     const eventoId = Number(eventoResultado.lastInsertRowid)
 
     const roles = new Map<string, number>()
@@ -116,7 +120,7 @@ export function guardarLoteRegular(
         numeroFila: fila.numeroFila,
         nombreEvento: fila.nombreEvento,
         fechaConstancia: fila.fechaConstancia,
-        modalidad: fila.modalidad as Modalidad,
+        modalidad: normalizarModalidad(fila.modalidad),
         participaComo: fila.participaComo,
         rolId,
         nombrePonencia: fila.nombrePonencia,

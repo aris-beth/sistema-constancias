@@ -10,6 +10,7 @@ import { PantallaValidacion, RegistroExcel, ErrorValidacion } from './pantallas/
 import { PantallaPrevisualizacion } from './pantallas/PantallaPrevisualizacion';
 import { PantallaGenerar, ResumenGeneracion } from './pantallas/PantallaGenerar';
 import {
+  actualizarNombreRegistro,
   registroAFila,
   registroAFilaGraduacion,
   registroAFilaCruda,
@@ -185,11 +186,7 @@ const App: React.FC = () => {
     marcarPendientes([idFila]);
     setRegistros(prev => prev.map(r => {
       if (r.idFila !== idFila) return r;
-      // En graduación el reconocimiento se imprime con el nombre "original",
-      // así que una corrección del nombre debe reflejarse también ahí.
-      if (campo === 'nombre' && modoConstancia === 'graduacion') {
-        return { ...r, nombre: valor, nombreOriginal: valor };
-      }
+      if (campo === 'nombre') return actualizarNombreRegistro(r, String(valor));
       return { ...r, [campo]: valor };
     }));
   };

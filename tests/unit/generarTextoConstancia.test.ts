@@ -27,9 +27,38 @@ describe('generarTextoConstancia', () => {
     expect(esUniversidadBUAP(universidad)).toBe(true)
   })
 
-  it('considera externa una universidad distinta de BUAP', () => {
+  it('considera externa una universidad distinta de BUAP y trata el campo vacío como BUAP', () => {
     expect(esUniversidadBUAP('Universidad Nacional Autónoma de México')).toBe(false)
-    expect(esUniversidadBUAP(null)).toBe(false)
+    expect(esUniversidadBUAP(null)).toBe(true)
+    expect(esUniversidadBUAP(undefined)).toBe(true)
+    expect(esUniversidadBUAP('   ')).toBe(true)
+  })
+
+  it.each([null, '', '   '])(
+    'usa el comportamiento BUAP cuando la universidad de origen está vacía (%s)',
+    (universidadOrigen) => {
+      expect(
+        generarTextoConstancia({
+          ...datosBase,
+          universidadOrigen,
+        }),
+      ).toEqual({
+        textoGenerado:
+          'Por participar como Organizador, en el evento Congreso 2026, en la Facultad de Ciencias de la Computación.',
+        esPersonalizado: false,
+        universidadExterna: null,
+      })
+    },
+  )
+
+  it('no marca como externa a una persona con texto personalizado y universidad vacía', () => {
+    expect(
+      generarTextoConstancia({
+        ...datosBase,
+        universidadOrigen: null,
+        textoPersonalizado: 'Texto institucional capturado por la coordinación.',
+      }).universidadExterna,
+    ).toBeNull()
   })
 
   it('genera el texto de un rol y resuelve la sede', () => {

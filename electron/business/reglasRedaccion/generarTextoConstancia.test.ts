@@ -17,6 +17,23 @@ describe('generarTextoConstancia', () => {
     )
   })
 
+  it.each([null, '', '   '])(
+    'trata una universidad de origen vacía como BUAP (%s)',
+    (universidadOrigen) => {
+      expect(
+        generarTextoConstancia({
+          ...datosBase,
+          universidadOrigen,
+        }),
+      ).toEqual({
+        textoGenerado:
+          'Por participar como Organizador, en el evento Congreso 2026, en la Facultad de Ciencias de la Computación.',
+        esPersonalizado: false,
+        universidadExterna: null,
+      })
+    },
+  )
+
   it.each(['Presencial CU', 'Presencial CU2', 'En línea', 'Otro'] as const)(
     'elimina la sede para una universidad externa con modalidad %s',
     (modalidad) => {
