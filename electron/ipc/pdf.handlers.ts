@@ -91,7 +91,7 @@ async function generarPrevisualizacion(entrada: PrevisualizarEntrada): Promise<s
   }
   const sello = obtenerConfiguracionSello()
   const { recursos } = await armarRecursos(carpetaResources(), sello)
-  return crearHtmlDocumento([crearPaginaRegular(documento, sello)], recursos, { previsualizacion: true })
+  return crearHtmlDocumento([crearPaginaRegular(documento, sello, recursos)], recursos, { previsualizacion: true })
 }
 
 export function registrarManejadorGenerarPdfs(): void {
@@ -161,8 +161,8 @@ export function registrarManejadorGenerarPdfs(): void {
 
       const advertencias = [...resultado.advertencias]
       if (!esGraduacion) {
-        if (!(sello.nombreFirmante ?? sello.nombreDirectora)?.trim()) {
-          advertencias.push('La configuración de firma no tiene nombre de firmante; revisa el Editor de plantillas.')
+        if (!sello.nombreDirectora?.trim()) {
+          advertencias.push('La configuración de firma no tiene nombre de directora; revisa el Editor de plantillas.')
         }
       }
 

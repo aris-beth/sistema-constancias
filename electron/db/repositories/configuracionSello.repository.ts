@@ -8,8 +8,8 @@ interface FilaConfiguracionSello {
   id: number
   nombre_directora: string
   nombre_rectora: string
-  ruta_firma: string | null
-  ruta_imagen_sello: string | null
+  ruta_sello_con_firma: string | null
+  ruta_sello_sin_firma: string | null
   fecha_actualizacion: string
 }
 
@@ -18,12 +18,9 @@ function mapearFila(fila: FilaConfiguracionSello): ConfiguracionSello {
     id: fila.id,
     nombreDirectora: fila.nombre_directora,
     nombreRectora: fila.nombre_rectora,
-    rutaFirma: fila.ruta_firma,
-    rutaImagenSello: fila.ruta_imagen_sello,
+    rutaSelloConFirma: fila.ruta_sello_con_firma,
+    rutaSelloSinFirma: fila.ruta_sello_sin_firma,
     fechaActualizacion: fila.fecha_actualizacion,
-    nombreFirmante: fila.nombre_directora,
-    cargoFirmante: 'Directora',
-    rutaImagenFirma: fila.ruta_firma,
   }
 }
 
@@ -54,10 +51,10 @@ export function actualizarConfiguracionSello(
 ): ConfiguracionSello {
   const db = obtenerBaseDeDatos()
 
-  const nombreDirectora = datos.nombreDirectora?.trim() || datos.nombreFirmante?.trim() || ''
+  const nombreDirectora = datos.nombreDirectora?.trim() || ''
   const nombreRectora = datos.nombreRectora?.trim() || ''
-  const rutaFirma = datos.rutaFirma ?? datos.rutaImagenFirma ?? null
-  const rutaImagenSello = datos.rutaImagenSello ?? null
+  const rutaSelloConFirma = datos.rutaSelloConFirma ?? null
+  const rutaSelloSinFirma = datos.rutaSelloSinFirma ?? null
 
   if (!nombreDirectora && !nombreRectora) {
     throw new Error('Escribe al menos el nombre de la directora o de la rectora.')
@@ -68,16 +65,16 @@ export function actualizarConfiguracionSello(
       `UPDATE configuracion_sello
          SET nombre_directora = @nombreDirectora,
            nombre_rectora = @nombreRectora,
-           ruta_firma = @rutaFirma,
-           ruta_imagen_sello = @rutaImagenSello,
+           ruta_sello_con_firma = @rutaSelloConFirma,
+           ruta_sello_sin_firma = @rutaSelloSinFirma,
            fecha_actualizacion = @fechaActualizacion
        WHERE id = 1`,
     )
     .run({
       nombreDirectora,
       nombreRectora,
-      rutaFirma,
-      rutaImagenSello,
+      rutaSelloConFirma,
+      rutaSelloSinFirma,
       fechaActualizacion: new Date().toISOString(),
     })
 

@@ -1,4 +1,6 @@
-import { dialog, ipcMain } from 'electron'
+import { app, dialog, ipcMain } from 'electron'
+import fs from 'node:fs'
+import path from 'node:path'
 import {
   actualizarConfiguracionFirmantesGraduacion,
   obtenerConfiguracionFirmantesGraduacion,
@@ -22,6 +24,36 @@ import type {
 
 const filtroImagenes = [{ name: 'Imágenes', extensions: ['png', 'jpg', 'jpeg', 'webp'] }]
 
+/**
+ * Copia la imagen elegida a una carpeta propia de la app (userData/sellos),
+ * con un nombre fijo por "slot" (con-firma / sin-firma). Así la ruta que se
+ * guarda en la base de datos ya no depende de que el archivo original (en
+ * el escritorio, un pendrive, etc.) siga existiendo ahí después, y el
+ * nombre del archivo nunca trae espacios ni acentos que puedan romper su
+ * visualización en la app.
+ */
+function copiarImagenAAlmacenSello(rutaOrigen: string, slot: 'con-firma' | 'sin-firma'): string {
+  const carpetaSellos = path.join(app.getPath('userData'), 'sellos')
+  fs.mkdirSync(carpetaSellos, { recursive: true })
+  const extension = path.extname(rutaOrigen).toLowerCase() || '.png'
+  const rutaDestino = path.join(carpetaSellos, `${slot}${extension}`)
+  fs.copyFileSync(rutaOrigen, rutaDestino)
+  return rutaDestino
+}
+
+async function seleccionarYCopiarSello(
+  titulo: string,
+  slot: 'con-firma' | 'sin-firma',
+): Promise<string | null> {
+  const seleccion = await dialog.showOpenDialog({
+    title: titulo,
+    properties: ['openFile'],
+    filters: filtroImagenes,
+  })
+  if (seleccion.canceled || seleccion.filePaths.length === 0) return null
+  return copiarImagenAAlmacenSello(seleccion.filePaths[0], slot)
+}
+
 export function registrarManejadoresConfiguracion(): void {
   ipcMain.handle('configuracion:obtener', () => ({
     sello: obtenerConfiguracionSello(),
@@ -29,22 +61,12 @@ export function registrarManejadoresConfiguracion(): void {
     folios: listarFoliosCatalogo(),
   }))
 
-  ipcMain.handle('configuracion:seleccionarFirma', async () => {
-    const seleccion = await dialog.showOpenDialog({
-      title: 'Selecciona la imagen de la firma',
-      properties: ['openFile'],
-      filters: filtroImagenes,
-    })
-    return seleccion.canceled || seleccion.filePaths.length === 0 ? null : seleccion.filePaths[0]
-  })
-  ipcMain.handle('configuracion:seleccionarSello', async () => {
-    const seleccion = await dialog.showOpenDialog({
-      title: 'Selecciona la imagen del sello',
-      properties: ['openFile'],
-      filters: filtroImagenes,
-    })
-    return seleccion.canceled || seleccion.filePaths.length === 0 ? null : seleccion.filePaths[0]
-  })
+  ipcMain.handle('configuracion:seleccionarSelloConFirma', () =>
+    seleccionarYCopiarSello('Selecciona el sello con la firma de la directora', 'con-firma'),
+  )
+  ipcMain.handle('configuracion:seleccionarSelloSinFirma', () =>
+    seleccionarYCopiarSello('Selecciona el sello en blanco (sin firma)', 'sin-firma'),
+  )
 
   ipcMain.handle(
     'configuracion:actualizarSello',

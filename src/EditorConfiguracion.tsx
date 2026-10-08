@@ -11,8 +11,20 @@ interface Props {
   onAbrirFolios: () => void
 }
 
+// file:// con cada segmento de ruta codificado aparte (encodeURIComponent):
+// una ruta con espacios o acentos (bastante probable en Windows, p. ej.
+// "C:/Users/María/Desktop/sello 2026.png") rompía la vista previa porque el
+// <img src> no es una URL válida tal cual. La letra de unidad ("C:") se deja
+// sin codificar porque los dos puntos ahí sí son válidos en una file URL.
 function rutaImagen(ruta: string | null): string | undefined {
-  return ruta ? `file:///${ruta.replace(/\\/g, '/')}` : undefined
+  if (!ruta) return undefined
+  // Quita el "/" inicial (rutas tipo /home/usuario/...) antes de separar en
+  // segmentos, para no duplicarlo al anteponer "file:///".
+  const segmentos = ruta.replace(/\\/g, '/').replace(/^\/+/, '').split('/')
+  const codificados = segmentos.map((segmento, indice) =>
+    indice === 0 && /^[a-zA-Z]:$/.test(segmento) ? segmento : encodeURIComponent(segmento),
+  )
+  return `file:///${codificados.join('/')}`
 }
 
 function VistaImagen({ ruta, alt }: { ruta: string | null; alt: string }): JSX.Element {
@@ -49,16 +61,16 @@ export default function EditorConfiguracion({ onVolver, onAbrirFolios }: Props) 
     }
   }
 
-  async function seleccionarImagen(tipo: 'firma' | 'sello'): Promise<void> {
+  async function seleccionarImagen(tipo: 'con-firma' | 'sin-firma'): Promise<void> {
     if (!sello) return
     try {
-      const ruta = tipo === 'firma'
-        ? await window.electronAPI.seleccionarImagenFirma()
-        : await window.electronAPI.seleccionarImagenSello()
+      const ruta = tipo === 'con-firma'
+        ? await window.electronAPI.seleccionarSelloConFirma()
+        : await window.electronAPI.seleccionarSelloSinFirma()
       if (!ruta) return
-      setSello((actual) => actual && (tipo === 'firma'
-        ? { ...actual, rutaFirma: ruta, rutaImagenFirma: ruta }
-        : { ...actual, rutaImagenSello: ruta }))
+      setSello((actual) => actual && (tipo === 'con-firma'
+        ? { ...actual, rutaSelloConFirma: ruta }
+        : { ...actual, rutaSelloSinFirma: ruta }))
     } catch (errorActual) {
       setError(errorActual instanceof Error ? errorActual.message : String(errorActual))
     }
@@ -74,8 +86,8 @@ export default function EditorConfiguracion({ onVolver, onAbrirFolios }: Props) 
         window.electronAPI.actualizarConfiguracionSello({
           nombreDirectora: sello.nombreDirectora,
           nombreRectora: sello.nombreRectora,
-          rutaFirma: sello.rutaFirma,
-          rutaImagenSello: sello.rutaImagenSello,
+          rutaSelloConFirma: sello.rutaSelloConFirma,
+          rutaSelloSinFirma: sello.rutaSelloSinFirma,
         }),
         window.electronAPI.actualizarFirmantesGraduacion({
           rectorNombre: firmantes.rectorNombre,
@@ -134,9 +146,13 @@ export default function EditorConfiguracion({ onVolver, onAbrirFolios }: Props) 
         <main className="editor-main">
           <Card>
             <div className="section-heading"><div><h3>Firma y sello</h3><p>Elementos que aparecerán en las constancias regulares.</p></div><Badge tone="neutral">Activos para nuevos documentos</Badge></div>
+            <p className="campo-ayuda">
+              El sello "con firma" ya trae la firma y el nombre de la directora horneados en la imagen: se usa tal cual y no se repite el nombre por separado.
+              Mientras no lo cargues, se usa el sello "en blanco" y el nombre de abajo se imprime como texto.
+            </p>
             <div className="image-grid">
-              <div className="image-control"><strong>Firma de directora</strong><VistaImagen ruta={sello.rutaFirma} alt="Vista previa de la firma" /><Button variant="secondary" type="button" onClick={() => void seleccionarImagen('firma')}>Subir firma</Button></div>
-              <div className="image-control"><strong>Sello institucional</strong><VistaImagen ruta={sello.rutaImagenSello} alt="Vista previa del sello" /><Button variant="secondary" type="button" onClick={() => void seleccionarImagen('sello')}>Subir sello</Button></div>
+              <div className="image-control"><strong>Sello con firma de la directora</strong><VistaImagen ruta={sello.rutaSelloConFirma} alt="Vista previa del sello con firma" /><Button variant="secondary" type="button" onClick={() => void seleccionarImagen('con-firma')}>Subir sello con firma</Button></div>
+              <div className="image-control"><strong>Sello en blanco (sin firma)</strong><VistaImagen ruta={sello.rutaSelloSinFirma} alt="Vista previa del sello en blanco" /><Button variant="secondary" type="button" onClick={() => void seleccionarImagen('sin-firma')}>Subir sello en blanco</Button></div>
             </div>
             <div className="form-grid">
               <Field label="Nombre de directora de facultad"><input value={sello.nombreDirectora} onChange={(evento) => setSello({ ...sello, nombreDirectora: evento.target.value })} /></Field>

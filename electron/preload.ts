@@ -50,10 +50,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('pdf:previsualizar', entrada),
   obtenerConfiguracion: (): Promise<ConfiguracionInicial> =>
     ipcRenderer.invoke('configuracion:obtener'),
-  seleccionarImagenFirma: (): Promise<string | null> =>
-    ipcRenderer.invoke('configuracion:seleccionarFirma'),
-  seleccionarImagenSello: (): Promise<string | null> =>
-    ipcRenderer.invoke('configuracion:seleccionarSello'),
+  seleccionarSelloConFirma: (): Promise<string | null> =>
+    ipcRenderer.invoke('configuracion:seleccionarSelloConFirma'),
+  seleccionarSelloSinFirma: (): Promise<string | null> =>
+    ipcRenderer.invoke('configuracion:seleccionarSelloSinFirma'),
   actualizarConfiguracionSello: (entrada: ConfiguracionSelloEntrada) =>
     ipcRenderer.invoke('configuracion:actualizarSello', entrada),
   actualizarFirmantesGraduacion: (entrada: ConfiguracionFirmantesGraduacionEntrada) =>

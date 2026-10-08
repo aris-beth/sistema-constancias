@@ -2,7 +2,7 @@ import Database from 'better-sqlite3'
 import { app } from 'electron'
 import path from 'node:path'
 import fs from 'node:fs'
-import { SCHEMA_SQL } from './schema'
+import { SCHEMA_SEED_SQL, SCHEMA_SQL } from './schema'
 
 let instancia: Database.Database | null = null
 
@@ -24,22 +24,27 @@ function ejecutarMigraciones(db: Database.Database): void {
 
   if (!nombresColumnasSello.has('nombre_directora')) {
     db.exec("ALTER TABLE configuracion_sello ADD COLUMN nombre_directora TEXT NOT NULL DEFAULT ''")
+    // Instalaciones muy viejas guardaban el nombre en "nombre_firmante".
+    if (nombresColumnasSello.has('nombre_firmante')) {
+      db.exec("UPDATE configuracion_sello SET nombre_directora = nombre_firmante WHERE nombre_directora = '' AND nombre_firmante <> ''")
+    }
   }
   if (!nombresColumnasSello.has('nombre_rectora')) {
     db.exec("ALTER TABLE configuracion_sello ADD COLUMN nombre_rectora TEXT NOT NULL DEFAULT ''")
   }
-  if (!nombresColumnasSello.has('ruta_firma')) {
-    db.exec('ALTER TABLE configuracion_sello ADD COLUMN ruta_firma TEXT')
+  if (!nombresColumnasSello.has('ruta_sello_con_firma')) {
+    db.exec('ALTER TABLE configuracion_sello ADD COLUMN ruta_sello_con_firma TEXT')
+    // "ruta_imagen_firma"/"ruta_firma" (versiones previas) guardaban solo la
+    // firma escaneada, no el sello completo horneado con firma: no hay una
+    // migración fiel posible, así que se deja vacía a propósito.
   }
-  if (!nombresColumnasSello.has('ruta_imagen_sello')) {
-    db.exec('ALTER TABLE configuracion_sello ADD COLUMN ruta_imagen_sello TEXT')
-  }
-
-  if (nombresColumnasSello.has('nombre_firmante')) {
-    db.exec("UPDATE configuracion_sello SET nombre_directora = nombre_firmante WHERE nombre_directora = '' AND nombre_firmante <> ''")
-  }
-  if (nombresColumnasSello.has('ruta_imagen_firma')) {
-    db.exec('UPDATE configuracion_sello SET ruta_firma = ruta_imagen_firma WHERE ruta_firma IS NULL')
+  if (!nombresColumnasSello.has('ruta_sello_sin_firma')) {
+    db.exec('ALTER TABLE configuracion_sello ADD COLUMN ruta_sello_sin_firma TEXT')
+    // "ruta_imagen_sello" (versión previa) sí era la imagen del sello en
+    // blanco: se traslada tal cual a la nueva columna.
+    if (nombresColumnasSello.has('ruta_imagen_sello')) {
+      db.exec('UPDATE configuracion_sello SET ruta_sello_sin_firma = ruta_imagen_sello WHERE ruta_sello_sin_firma IS NULL')
+    }
   }
 
   const columnasConstancia = db.prepare('PRAGMA table_info(constancia)').all() as Array<{
@@ -139,6 +144,9 @@ export function obtenerBaseDeDatos(): Database.Database {
 
     db.exec(SCHEMA_SQL)
     ejecutarMigraciones(db)
+    // Después de migrar: así el seed (INSERT OR IGNORE) ya encuentra las
+    // columnas nuevas en una base de datos que venía de una versión vieja.
+    db.exec(SCHEMA_SEED_SQL)
 
     instancia = db
     return instancia

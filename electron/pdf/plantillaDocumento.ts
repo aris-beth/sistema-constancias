@@ -44,15 +44,17 @@ export interface RecursosDocumento {
   fuentesCss: string
   /** data URI del logo institucional (o null si no se encontró el archivo). */
   logo: string | null
-  firma: string | null
-  sello: string | null
+  /** Sello con la firma de la directora ya horneada (nombre y cargo incluidos). */
+  selloConFirma: string | null
+  /** Versión en blanco del mismo sello (sin firma ni nombre). */
+  selloSinFirma: string | null
 }
 
 export const RECURSOS_VACIOS: RecursosDocumento = {
   fuentesCss: '',
   logo: null,
-  firma: null,
-  sello: null,
+  selloConFirma: null,
+  selloSinFirma: null,
 }
 
 const LEMA_INSTITUCIONAL = 'Pensar bien, para vivir mejor'
@@ -188,7 +190,11 @@ function encabezadoInstitucional(encabezado: string): string {
       </header>`
 }
 
-export function crearPaginaRegular(documento: DatosDocumentoPdf, sello: ConfiguracionSello): string {
+export function crearPaginaRegular(
+  documento: DatosDocumentoPdf,
+  sello: ConfiguracionSello,
+  recursos: Pick<RecursosDocumento, 'selloConFirma' | 'selloSinFirma'>,
+): string {
   const destinatario = destinatarioHtml(documento.nombre)
   const ajustePonencia = documento.ponencia ? autoajustarTexto(documento.ponencia, 'ponencia') : null
   // Cuando hay ponencia larga, el nivel menor entre nombre y ponencia evita
@@ -196,8 +202,13 @@ export function crearPaginaRegular(documento: DatosDocumentoPdf, sello: Configur
   const tamanoCuerpo = ajustePonencia
     ? Math.min(destinatario.tamanoPt, ajustePonencia.tamanoFuentePt, 12)
     : 12
-  const nombreFirmante = sello.nombreFirmante ?? sello.nombreDirectora
-  const cargoFirmante = sello.cargoFirmante ?? 'Directora'
+  const nombreFirmante = sello.nombreDirectora
+  const cargoFirmante = 'Directora'
+  // El sello "con firma" ya trae horneados la firma, el nombre y el cargo de
+  // la directora (sección 6.4): si está disponible se usa tal cual y NO se
+  // repite el nombre como texto. El texto de respaldo solo aparece mientras
+  // no se haya cargado esa versión (se usa entonces el sello en blanco).
+  const tieneSelloConFirma = Boolean(recursos.selloConFirma)
 
   return `<section class="pagina">
     <div class="col-izq"><div class="logo"></div><div class="folio-bloque"><div class="folio">Folio: ${escaparHtml(documento.folioInterno)}</div></div></div>
@@ -210,15 +221,15 @@ export function crearPaginaRegular(documento: DatosDocumentoPdf, sello: Configur
           ${documento.institucion ? `<div class="institucion">${escaparHtml(documento.institucion)}</div>` : ''}
           <div class="cuerpo" style="font-size: ${tamanoCuerpo}pt">${cuerpoHtml(documento)}</div>
         </div>
-        <div class="bloque-fecha">
-          <div class="lema">“${LEMA_INSTITUCIONAL}”</div>
-          <div class="fecha">Puebla de Z., a ${escaparHtml(formatearFechaParaDocumento(documento.fecha))}</div>
+        <div class="sello-bloque">
+          <div class="sello-texto">
+            <div class="lema">“${LEMA_INSTITUCIONAL}”</div>
+            <div class="fecha">Puebla de Z., a ${escaparHtml(formatearFechaParaDocumento(documento.fecha))}</div>
+          </div>
+          <div class="sello-img"></div>
+          ${!tieneSelloConFirma ? `<div class="sello-firmante"><strong>${escaparHtml(nombreFirmante)}</strong><span>${escaparHtml(cargoFirmante)}</span></div>` : ''}
         </div>
       </main>
-      <footer class="pie-regular">
-        <div class="firma"><div class="firma-img"></div><strong>${escaparHtml(nombreFirmante)}</strong><span>${escaparHtml(cargoFirmante)}</span></div>
-        <div class="sello"></div>
-      </footer>
     </div>
   </section>`
 }
@@ -320,12 +331,19 @@ export function crearHtmlDocumento(
       .lema { font-size: 12pt; font-weight: 700; line-height: 1.45; }
       .fecha { font-size: 12pt; line-height: 1.45; }
 
-      /* Pie: regular (firma + sello) */
-      .pie-regular { flex: 0 0 auto; position: relative; width: 100%; height: 1.5in; display: flex; justify-content: center; align-items: flex-end; padding-bottom: 0.2in; }
-      .firma { display: flex; flex-direction: column; align-items: center; font-size: 12pt; line-height: 1.25; }
-      .firma strong { font-weight: 700; }
-      .firma-img { width: 2.2in; height: 0.7in; background-repeat: no-repeat; background-position: center bottom; background-size: contain; }
-      .sello { position: absolute; right: 0; bottom: 0.1in; width: 1.3in; height: 1.3in; background-repeat: no-repeat; background-position: center; background-size: contain; }
+      /* Pie: regular. Bloque único (medido sobre la plantilla oficial en Word:
+         sección con el sello institucional) con la frase/fecha impresas
+         encima del sello y, si todavía no hay sello con firma horneada, el
+         nombre de la directora impreso donde iría esa firma. Va en el flujo
+         normal (no con posición fija en la página) para que nunca se monte
+         sobre el cuerpo del texto cuando este ocupa varias líneas. */
+      .sello-bloque { position: relative; flex: 0 0 auto; width: 3.93in; height: 2.2in; margin-top: 0.22in; }
+      .sello-texto { position: absolute; left: 0; top: 0.17in; width: 100%; text-align: center; }
+      .sello-texto .lema { font-size: 12pt; font-weight: 700; line-height: 1.45; }
+      .sello-texto .fecha { font-size: 12pt; line-height: 1.45; }
+      .sello-img { position: absolute; left: 0.33in; top: 0; width: 3.26in; height: 2.17in; background-repeat: no-repeat; background-position: center; background-size: contain; }
+      .sello-firmante { position: absolute; left: 0; top: 1.72in; width: 100%; text-align: center; font-size: 12pt; line-height: 1.3; }
+      .sello-firmante strong { font-weight: 700; display: block; }
 
       /* Pie: graduación (dos firmantes, alineados verticalmente) */
       .firmantes { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 0.56in; padding-bottom: 0.15in; }
@@ -336,8 +354,7 @@ export function crearHtmlDocumento(
       .graduacion .cuerpo { font-size: 13.5pt; line-height: 1.3; margin-top: 0.065in; }
 
       ${reglaImagen('.logo', recursos.logo)}
-      ${reglaImagen('.firma-img', recursos.firma)}
-      ${reglaImagen('.sello', recursos.sello)}
+      ${reglaImagen('.sello-img', recursos.selloConFirma ?? recursos.selloSinFirma)}
       ${estilosPreview}
     </style></head><body>${cuerpo}</body></html>`
 }

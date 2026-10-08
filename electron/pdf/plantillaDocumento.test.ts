@@ -17,9 +17,9 @@ import type {
 } from '../../shared/types/configuracion'
 
 const sello = {
-  rutaImagenFirma: null,
-  nombreFirmante: 'Firma de prueba',
-  cargoFirmante: 'Cargo de prueba',
+  nombreDirectora: 'Firma de prueba',
+  rutaSelloConFirma: null,
+  rutaSelloSinFirma: null,
 } as unknown as ConfiguracionSello
 
 const firmantes = {
@@ -50,7 +50,7 @@ function documento(overrides: Partial<DatosDocumentoPdf> = {}): DatosDocumentoPd
 
 describe('plantillaDocumento', () => {
   it('aplica autoajuste y saltos de línea a un nombre de 168 caracteres', () => {
-    const html = crearPaginaRegular(documento({ nombre: textoDeLongitud(168) }), sello)
+    const html = crearPaginaRegular(documento({ nombre: textoDeLongitud(168) }), sello, RECURSOS_VACIOS)
 
     expect(html).toContain('<br/>')
     expect(html).toContain('class="destinatario" style="font-size: 11pt"')
@@ -66,16 +66,23 @@ describe('plantillaDocumento', () => {
   })
 
   it('reduce el cuerpo cuando la ponencia requiere un nivel menor', () => {
-    const html = crearPaginaRegular(documento({ ponencia: textoDeLongitud(130) }), sello)
+    const html = crearPaginaRegular(documento({ ponencia: textoDeLongitud(130) }), sello, RECURSOS_VACIOS)
     expect(html).toContain('class="cuerpo" style="font-size: 11pt"')
   })
 
-  it('la constancia regular lleva un solo firmante y el folio', () => {
-    const html = crearPaginaRegular(documento(), sello)
-    expect(html).toContain('Firma de prueba')
-    expect(html).toContain('Cargo de prueba')
-    expect(html).toContain('Folio: FOL-001')
-    expect(html.match(/<div class="firma">/g)).toHaveLength(1)
+  it('la constancia regular imprime el nombre solo si no hay sello con firma horneada', () => {
+    const sinFirma = crearPaginaRegular(documento(), sello, RECURSOS_VACIOS)
+    expect(sinFirma).toContain('Firma de prueba')
+    expect(sinFirma).toContain('Directora')
+    expect(sinFirma).toContain('Folio: FOL-001')
+    expect(sinFirma.match(/<div class="sello-firmante">/g)).toHaveLength(1)
+
+    const conFirma = crearPaginaRegular(documento(), sello, {
+      ...RECURSOS_VACIOS,
+      selloConFirma: 'data:image/png;base64,AAAA',
+    })
+    expect(conFirma).not.toContain('Firma de prueba')
+    expect(conFirma).not.toContain('sello-firmante')
   })
 
   it('la graduación imprime dos firmantes y ningún bloque de folio', () => {
@@ -86,14 +93,14 @@ describe('plantillaDocumento', () => {
   })
 
   it('escapa HTML en nombre y texto', () => {
-    const html = crearPaginaRegular(documento({ nombre: '<b>X</b>', texto: 'a & b' }), sello)
+    const html = crearPaginaRegular(documento({ nombre: '<b>X</b>', texto: 'a & b' }), sello, RECURSOS_VACIOS)
     expect(html).toContain('&lt;b&gt;X&lt;/b&gt;')
     expect(html).toContain('a &amp; b')
   })
 
   it('incrusta imágenes y fuentes como data URI y no usa rutas file://', () => {
     const html = crearHtmlDocumento(
-      [crearPaginaRegular(documento(), sello)],
+      [crearPaginaRegular(documento(), sello, RECURSOS_VACIOS)],
       { ...RECURSOS_VACIOS, logo: 'data:image/png;base64,BBBB' },
     )
     expect(html).toContain('.logo{background-image:url("data:image/png;base64,BBBB")}')
@@ -101,7 +108,7 @@ describe('plantillaDocumento', () => {
   })
 
   it('la previsualización se escala a la ventana y el PDF no', () => {
-    const pagina = crearPaginaRegular(documento(), sello)
+    const pagina = crearPaginaRegular(documento(), sello, RECURSOS_VACIOS)
     expect(crearHtmlDocumento([pagina], RECURSOS_VACIOS, { previsualizacion: true })).toContain('class="visor"')
     expect(crearHtmlDocumento([pagina], RECURSOS_VACIOS)).not.toContain('class="visor"')
   })
@@ -149,5 +156,19 @@ describe('plantillaDocumento', () => {
     expect(institucionParaDocumento('')).toBeNull()
     expect(institucionParaDocumento(null)).toBeNull()
     expect(institucionParaDocumento('UNAM')).toBe('UNAM')
+  })
+
+  it('usa el sello con firma cuando está disponible y si no, el sello en blanco', () => {
+    const conFirma = crearHtmlDocumento(
+      [crearPaginaRegular(documento(), sello, { ...RECURSOS_VACIOS, selloConFirma: 'data:image/png;base64,AAAA' })],
+      { ...RECURSOS_VACIOS, selloConFirma: 'data:image/png;base64,AAAA' },
+    )
+    expect(conFirma).toContain('.sello-img{background-image:url("data:image/png;base64,AAAA")}')
+
+    const sinFirma = crearHtmlDocumento(
+      [crearPaginaRegular(documento(), sello, { ...RECURSOS_VACIOS, selloSinFirma: 'data:image/png;base64,CCCC' })],
+      { ...RECURSOS_VACIOS, selloSinFirma: 'data:image/png;base64,CCCC' },
+    )
+    expect(sinFirma).toContain('.sello-img{background-image:url("data:image/png;base64,CCCC")}')
   })
 })

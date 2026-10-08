@@ -86,20 +86,21 @@ export async function armarRecursos(
   const base = await cargarRecursosBase(carpetaResources)
   const advertencias = [...base.advertencias]
 
-  let firma: string | null = null
-  let imagenSello: string | null = null
+  let selloConFirma: string | null = null
+  let selloSinFirma: string | null = null
   if (sello) {
-    const rutaFirma = sello.rutaImagenFirma ?? sello.rutaFirma
-    firma = rutaFirma ? await leerImagenComoDataUri(rutaFirma) : null
-    if (rutaFirma && !firma) advertencias.push(`No se pudo leer la imagen de la firma (${rutaFirma}).`)
-    imagenSello = sello.rutaImagenSello ? await leerImagenComoDataUri(sello.rutaImagenSello) : null
-    if (sello.rutaImagenSello && !imagenSello) {
-      advertencias.push(`No se pudo leer la imagen del sello (${sello.rutaImagenSello}).`)
+    selloConFirma = sello.rutaSelloConFirma ? await leerImagenComoDataUri(sello.rutaSelloConFirma) : null
+    if (sello.rutaSelloConFirma && !selloConFirma) {
+      advertencias.push(`No se pudo leer el sello con firma (${sello.rutaSelloConFirma}).`)
+    }
+    selloSinFirma = sello.rutaSelloSinFirma ? await leerImagenComoDataUri(sello.rutaSelloSinFirma) : null
+    if (sello.rutaSelloSinFirma && !selloSinFirma) {
+      advertencias.push(`No se pudo leer el sello en blanco (${sello.rutaSelloSinFirma}).`)
     }
   }
 
   return {
-    recursos: { fuentesCss: base.fuentesCss, logo: base.logo, firma, sello: imagenSello },
+    recursos: { fuentesCss: base.fuentesCss, logo: base.logo, selloConFirma, selloSinFirma },
     advertencias,
   }
 }

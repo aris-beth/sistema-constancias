@@ -95,11 +95,8 @@ export interface PrevisualizarEntrada {
 export interface ConfiguracionSelloEntrada {
   nombreDirectora: string
   nombreRectora: string
-  rutaFirma: string | null
-  rutaImagenSello: string | null
-  nombreFirmante?: string
-  cargoFirmante?: string
-  rutaImagenFirma?: string | null
+  rutaSelloConFirma: string | null
+  rutaSelloSinFirma: string | null
 }
 
 export interface ConfiguracionFirmantesGraduacionEntrada {

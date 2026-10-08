@@ -135,11 +135,17 @@ CREATE INDEX IF NOT EXISTS idx_constancia_evento ON constancia(evento_id);
 CREATE INDEX IF NOT EXISTS idx_constancia_rol ON constancia(rol_id);
 CREATE INDEX IF NOT EXISTS idx_constancia_participante_participante ON constancia_participante(participante_id);
 
--- Filas semilla de las tablas singleton: se insertan una sola vez. La
+-- Filas semilla de las tablas singleton (SCHEMA_SEED_SQL en schema.ts, NO
+-- va en el mismo bloque que SCHEMA_SQL): se insertan una sola vez. La
 -- combinación de CHECK(id = 1) + INSERT OR IGNORE garantiza que, aunque
 -- este script se ejecute en cada arranque de la app, no se dupliquen ni se
 -- sobrescriban cambios ya guardados por la persona operadora.
-INSERT OR IGNORE INTO configuracion_sello (id, nombre_directora, nombre_rectora, ruta_firma, ruta_imagen_sello, fecha_actualizacion)
+-- Por la MISMA razón explicada arriba para los índices de `constancia`
+-- (IF NOT EXISTS no agrega columnas a una tabla que ya existía), este seed
+-- se ejecuta en connection.ts DESPUÉS de `ejecutarMigraciones()`: si
+-- corriera junto con el resto del esquema, fallaría con "no such column"
+-- en una base de datos vieja mientras esa columna no exista todavía.
+INSERT OR IGNORE INTO configuracion_sello (id, nombre_directora, nombre_rectora, ruta_sello_con_firma, ruta_sello_sin_firma, fecha_actualizacion)
 VALUES (1, '', '', NULL, NULL, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
 
 INSERT OR IGNORE INTO configuracion_firmantes_graduacion (id, rector_nombre, rector_cargo, director_nombre, director_cargo, fecha_actualizacion)

@@ -86,7 +86,7 @@ export async function generarPdfsPorRol(
   for (const grupo of grupos) {
     try {
       const paginas = grupo.documentos.map((documento) =>
-        esGraduacion ? crearPaginaGraduacion(documento, firmantes) : crearPaginaRegular(documento, sello),
+        esGraduacion ? crearPaginaGraduacion(documento, firmantes) : crearPaginaRegular(documento, sello, recursos),
       )
       const buffer = await imprimirHtml(crearHtmlDocumento(paginas, recursos))
       const ruta = path.join(carpetaPdfs, `${nombreSeguro(grupo.nombreRol, 'sin_rol')}.pdf`)

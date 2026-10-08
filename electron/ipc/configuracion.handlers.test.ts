@@ -1,10 +1,15 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+const carpetaUserData = `${process.cwd()}/.tmp-configuracion-handlers-userdata`
 
 const { handlers, mostrarDialogo, mocks } = vi.hoisted(() => ({
   handlers: new Map<string, (...argumentos: any[]) => unknown>(),
   mostrarDialogo: vi.fn(),
   mocks: {
-    obtenerConfiguracionSello: vi.fn(() => ({ nombreFirmante: 'Firma', cargoFirmante: 'Cargo', rutaImagenFirma: null, fechaActualizacion: '' })),
+    obtenerConfiguracionSello: vi.fn(() => ({ nombreDirectora: 'Directora', nombreRectora: '', rutaSelloConFirma: null, rutaSelloSinFirma: null, fechaActualizacion: '' })),
     obtenerConfiguracionFirmantesGraduacion: vi.fn(() => ({ rectorNombre: 'Rector', rectorCargo: 'Rectora', directorNombre: 'Director', directorCargo: 'Director', fechaActualizacion: '' })),
     actualizarConfiguracionSello: vi.fn((entrada) => ({ ...entrada, fechaActualizacion: '' })),
     actualizarConfiguracionFirmantesGraduacion: vi.fn((entrada) => ({ ...entrada, fechaActualizacion: '' })),
@@ -16,6 +21,7 @@ const { handlers, mostrarDialogo, mocks } = vi.hoisted(() => ({
 }))
 
 vi.mock('electron', () => ({
+  app: { getPath: () => carpetaUserData },
   dialog: { showOpenDialog: mostrarDialogo },
   ipcMain: { handle: (canal: string, handler: (...argumentos: any[]) => unknown) => handlers.set(canal, handler) },
 }))
@@ -41,16 +47,32 @@ describe('handlers de configuración', () => {
   beforeEach(() => {
     handlers.clear()
     mostrarDialogo.mockReset()
+    fs.rmSync(carpetaUserData, { recursive: true, force: true })
     registrarManejadoresConfiguracion()
   })
 
-  it('usa el diálogo de imágenes para seleccionar la firma', async () => {
-    mostrarDialogo.mockResolvedValue({ canceled: false, filePaths: ['C:/firma.png'] })
+  afterEach(() => {
+    fs.rmSync(carpetaUserData, { recursive: true, force: true })
+  })
 
-    const ruta = await handlers.get('configuracion:seleccionarFirma')?.({}, {})
+  it('copia el sello elegido a la carpeta propia de la app (con-firma) con nombre fijo', async () => {
+    const origen = path.join(os.tmpdir(), `sello-origen-${Date.now()}.png`)
+    fs.writeFileSync(origen, 'contenido-de-prueba')
+    mostrarDialogo.mockResolvedValue({ canceled: false, filePaths: [origen] })
 
-    expect(ruta).toBe('C:/firma.png')
+    const ruta = await handlers.get('configuracion:seleccionarSelloConFirma')?.({}, {})
+
     expect(mostrarDialogo).toHaveBeenCalledWith(expect.objectContaining({ filters: expect.any(Array) }))
+    expect(ruta).toBe(path.join(carpetaUserData, 'sellos', 'con-firma.png'))
+    expect(fs.readFileSync(ruta as string, 'utf-8')).toBe('contenido-de-prueba')
+
+    fs.unlinkSync(origen)
+  })
+
+  it('no copia nada si se cancela el diálogo', async () => {
+    mostrarDialogo.mockResolvedValue({ canceled: true, filePaths: [] })
+    const ruta = await handlers.get('configuracion:seleccionarSelloSinFirma')?.({}, {})
+    expect(ruta).toBeNull()
   })
 
   it('registra y edita folios del catálogo', async () => {
@@ -65,7 +87,7 @@ describe('handlers de configuración', () => {
 
   it('expone lectura y actualización de sello y firmantes', () => {
     const inicial = handlers.get('configuracion:obtener')?.({}, {})
-    handlers.get('configuracion:actualizarSello')?.({}, { nombreFirmante: 'Nueva firma', cargoFirmante: 'Directora', rutaImagenFirma: null })
+    handlers.get('configuracion:actualizarSello')?.({}, { nombreDirectora: 'Nueva directora', nombreRectora: '', rutaSelloConFirma: null, rutaSelloSinFirma: null })
     handlers.get('configuracion:actualizarFirmantesGraduacion')?.({}, { rectorNombre: 'R', rectorCargo: 'Rector', directorNombre: 'D', directorCargo: 'Director' })
 
     expect(inicial).toEqual(expect.objectContaining({ sello: expect.any(Object), firmantesGraduacion: expect.any(Object) }))

@@ -41,8 +41,8 @@ declare global {
       seleccionarCarpetaDestino: () => Promise<string | null>
       previsualizarDocumento: (entrada: PrevisualizarEntrada) => Promise<string>
       obtenerConfiguracion: () => Promise<ConfiguracionInicial>
-      seleccionarImagenFirma: () => Promise<string | null>
-      seleccionarImagenSello: () => Promise<string | null>
+      seleccionarSelloConFirma: () => Promise<string | null>
+      seleccionarSelloSinFirma: () => Promise<string | null>
       actualizarConfiguracionSello: (entrada: ConfiguracionSelloEntrada) => Promise<ConfiguracionSello>
       actualizarFirmantesGraduacion: (entrada: ConfiguracionFirmantesGraduacionEntrada) => Promise<ConfiguracionFirmantesGraduacion>
       listarFolios: () => Promise<FolioCatalogoEntry[]>

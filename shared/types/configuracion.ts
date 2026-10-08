@@ -8,13 +8,19 @@ export interface ConfiguracionSello {
   id?: number;
   nombreDirectora: string;
   nombreRectora: string;
-  rutaFirma: string | null;
-  rutaImagenSello: string | null;
+  /**
+   * Sello con la firma de la directora ya horneada en la imagen (incluye
+   * también su nombre y cargo impresos). Cuando existe, se usa tal cual y
+   * NO se repite el nombre como texto aparte.
+   */
+  rutaSelloConFirma: string | null;
+  /**
+   * Versión en blanco (sin firma) del mismo sello, para cuando todavía no
+   * se ha cargado/actualizado la versión con firma: el nombre y cargo se
+   * imprimen entonces como texto normal encima de esta imagen.
+   */
+  rutaSelloSinFirma: string | null;
   fechaActualizacion?: string;
-  /** Aliases temporales para instalaciones y consumidores anteriores. */
-  nombreFirmante?: string;
-  cargoFirmante?: string;
-  rutaImagenFirma?: string | null;
 }
 
 export type ConfiguracionSelloActualizable = Omit<ConfiguracionSello, 'fechaActualizacion'>

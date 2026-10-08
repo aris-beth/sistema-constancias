@@ -27,13 +27,15 @@ describe('repositorios de configuración singleton', () => {
 
   it('actualiza el sello sin crear otra fila', () => {
     const actualizado = actualizarConfiguracionSello({
-      nombreFirmante: 'Nueva firma',
-      cargoFirmante: 'Coordinación',
-      rutaImagenFirma: 'C:/firma.png',
+      nombreDirectora: 'Nueva directora',
+      nombreRectora: '',
+      rutaSelloConFirma: 'C:/sello-con-firma.png',
+      rutaSelloSinFirma: 'C:/sello-sin-firma.png',
     })
 
-    expect(actualizado.nombreFirmante).toBe('Nueva firma')
-    expect(actualizado.rutaImagenFirma).toBe('C:/firma.png')
+    expect(actualizado.nombreDirectora).toBe('Nueva directora')
+    expect(actualizado.rutaSelloConFirma).toBe('C:/sello-con-firma.png')
+    expect(actualizado.rutaSelloSinFirma).toBe('C:/sello-sin-firma.png')
     expect(obtenerBaseDeDatos().prepare('SELECT COUNT(*) AS total FROM configuracion_sello').get()).toEqual({ total: 1 })
   })
 

@@ -64,8 +64,8 @@ CREATE TABLE IF NOT EXISTS configuracion_sello (
   id INTEGER PRIMARY KEY CHECK (id = 1),
   nombre_directora TEXT NOT NULL DEFAULT '',
   nombre_rectora TEXT NOT NULL DEFAULT '',
-  ruta_firma TEXT,
-  ruta_imagen_sello TEXT,
+  ruta_sello_con_firma TEXT,
+  ruta_sello_sin_firma TEXT,
   fecha_actualizacion TEXT NOT NULL
 );
 
@@ -88,9 +88,19 @@ CREATE TABLE IF NOT EXISTS folio_catalogo (
 CREATE INDEX IF NOT EXISTS idx_constancia_evento ON constancia(evento_id);
 CREATE INDEX IF NOT EXISTS idx_constancia_rol ON constancia(rol_id);
 CREATE INDEX IF NOT EXISTS idx_constancia_participante_participante ON constancia_participante(participante_id);
+`
 
-INSERT OR IGNORE INTO configuracion_sello (id, nombre_firmante, cargo_firmante, ruta_imagen_firma, fecha_actualizacion)
-VALUES (1, '', '', NULL, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
+// Separado de SCHEMA_SQL a propósito: en una base de datos que ya existía
+// (creada con una versión anterior del esquema), CREATE TABLE IF NOT EXISTS
+// no agrega columnas nuevas a una tabla que ya existe. Si este INSERT
+// corriera junto con SCHEMA_SQL, fallaría con "no such column" para
+// cualquier columna agregada después (p. ej. ruta_sello_con_firma) hasta
+// que las migraciones de connection.ts las agreguen. Por eso
+// obtenerBaseDeDatos() ejecuta SCHEMA_SQL, LUEGO las migraciones, y SOLO
+// DESPUÉS este seed.
+export const SCHEMA_SEED_SQL = `
+INSERT OR IGNORE INTO configuracion_sello (id, nombre_directora, nombre_rectora, ruta_sello_con_firma, ruta_sello_sin_firma, fecha_actualizacion)
+VALUES (1, '', '', NULL, NULL, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
 
 INSERT OR IGNORE INTO configuracion_firmantes_graduacion (id, rector_nombre, rector_cargo, director_nombre, director_cargo, fecha_actualizacion)
 VALUES (1, '', 'Rectora', '', 'Directora', strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
