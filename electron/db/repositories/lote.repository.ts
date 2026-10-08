@@ -37,28 +37,51 @@ export function guardarLoteRegular(
   })
 
   const db = obtenerBaseDeDatos()
-  if (folioSolicitado) {
-    const existente = db.prepare('SELECT id FROM evento WHERE folio = ?').get(folioSolicitado)
-    if (existente) throw new Error(`Ya existe un evento registrado con el folio "${folioSolicitado}".`)
-  }
 
   const transaccion = db.transaction(() => {
     const primera = filasGuardables[0]
     const folio =
       folioSolicitado ??
       generarFolioAutomatico(primera.nombreEvento.trim(), primera.fechaConstancia.trim())
-    const eventoResultado = db
-      .prepare(
-        `INSERT INTO evento (folio, nombre_evento, fecha_constancia, modalidad, tipo_plantilla, generacion, carrera)
-         VALUES (?, ?, ?, ?, 'regular', NULL, NULL)`,
-      )
-      .run(
-        folio,
+    const eventoExistente = db
+      .prepare('SELECT id, tipo_plantilla FROM evento WHERE folio = ?')
+      .get(folio) as { id: number; tipo_plantilla: string } | undefined
+    let eventoId: number
+
+    if (eventoExistente) {
+      if (eventoExistente.tipo_plantilla !== 'regular') {
+        throw new Error(`El folio "${folio}" pertenece a un evento de graduación.`)
+      }
+      eventoId = eventoExistente.id
+      db.prepare(
+        `UPDATE evento
+         SET nombre_evento = ?, fecha_constancia = ?, modalidad = ?
+         WHERE id = ?`,
+      ).run(
         primera.nombreEvento.trim(),
         primera.fechaConstancia.trim(),
         normalizarModalidad(primera.modalidad),
+        eventoId,
       )
-    const eventoId = Number(eventoResultado.lastInsertRowid)
+      db.prepare(
+        `DELETE FROM constancia_participante
+         WHERE constancia_id IN (SELECT id FROM constancia WHERE evento_id = ?)`,
+      ).run(eventoId)
+      db.prepare('DELETE FROM constancia WHERE evento_id = ?').run(eventoId)
+    } else {
+      const eventoResultado = db
+        .prepare(
+          `INSERT INTO evento (folio, nombre_evento, fecha_constancia, modalidad, tipo_plantilla, generacion, carrera)
+           VALUES (?, ?, ?, ?, 'regular', NULL, NULL)`,
+        )
+        .run(
+          folio,
+          primera.nombreEvento.trim(),
+          primera.fechaConstancia.trim(),
+          normalizarModalidad(primera.modalidad),
+        )
+      eventoId = Number(eventoResultado.lastInsertRowid)
+    }
 
     const roles = new Map<string, number>()
     const buscarRol = db.prepare('SELECT id, nombre_rol FROM rol')
@@ -86,7 +109,8 @@ export function guardarLoteRegular(
     for (const fila of filasGuardables) {
       let rolId = roles.get(normalizarClave(fila.participaComo))
       if (!rolId) {
-        const rol = insertarRol.run(fila.participaComo.trim(), fila.textoGenerado)
+        const plantillaTexto = fila.esPersonalizado ? '' : fila.textoGenerado
+        const rol = insertarRol.run(fila.participaComo.trim(), plantillaTexto)
         rolId = Number(rol.lastInsertRowid)
         roles.set(normalizarClave(fila.participaComo), rolId)
       }
@@ -126,6 +150,7 @@ export function guardarLoteRegular(
         nombrePonencia: fila.nombrePonencia,
         textoGenerado: fila.textoGenerado,
         esPersonalizado: fila.esPersonalizado,
+        universidadOrigen: fila.universidadOrigen?.trim() || null,
         participantes: participantesFila,
       })
       for (const participante of participantesFila) {
@@ -136,8 +161,8 @@ export function guardarLoteRegular(
     const decisiones = orquestarGuardadoLote(filasResueltas, folio)
     const insertarConstancia = db.prepare(
       `INSERT INTO constancia (evento_id, rol_id, ponencia, texto_generado, es_personalizado,
-       tipo_documento, numero_para_persona_evento, fecha_generacion, folio_interno, estado)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'generada')`,
+       tipo_documento, numero_para_persona_evento, universidad_origen, fecha_generacion, folio_interno, estado)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'generada')`,
     )
     const insertarRelacion = db.prepare(
       'INSERT INTO constancia_participante (constancia_id, participante_id) VALUES (?, ?)',
@@ -154,6 +179,7 @@ export function guardarLoteRegular(
         constancia.esPersonalizado ? 1 : 0,
         constancia.tipoDocumento,
         constancia.numeroParaPersonaEvento,
+        constancia.universidadOrigen,
         new Date().toISOString(),
         folioInterno,
       )

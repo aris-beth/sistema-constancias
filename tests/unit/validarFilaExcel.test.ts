@@ -106,4 +106,3 @@ describe('validarFilaExcel', () => {
       resultado.errores).toContain('Fila 2: la fecha de la constancia no es válida.')
   })  
 })
-

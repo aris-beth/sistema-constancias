@@ -85,6 +85,24 @@ describe('plantillaDocumento', () => {
     expect(conFirma).not.toContain('sello-firmante')
   })
 
+  it('muestra "otorga la presente" sin anteponer "constancia" en el encabezado', () => {
+    const html = crearPaginaRegular(documento(), sello, RECURSOS_VACIOS)
+
+    expect(html).toContain('A través de la Facultad de Ciencias de la Computación')
+    expect(html).toContain('<div class="subtitulo otorga">otorga la presente</div>')
+    expect(html).not.toContain('constancia otorga la presente')
+  })
+
+  it('centra el folio entre el escudo y el borde inferior y muestra "A:" en negrita', () => {
+    const html = crearHtmlDocumento(
+      [crearPaginaRegular(documento(), sello, RECURSOS_VACIOS)],
+      RECURSOS_VACIOS,
+    )
+
+    expect(html).toContain('flex: 1 1 auto; flex-direction: column; align-items: center; justify-content: center; width: 100%; min-height: 1.05in;')
+    expect(html).toContain('.destinatario .prefijo { font-weight: 700; }')
+  })
+
   it('la graduación imprime dos firmantes y ningún bloque de folio', () => {
     const html = crearPaginaGraduacion(documento(), firmantes)
     expect(html).toContain('Rector de prueba')
@@ -170,5 +188,16 @@ describe('plantillaDocumento', () => {
       { ...RECURSOS_VACIOS, selloSinFirma: 'data:image/png;base64,CCCC' },
     )
     expect(sinFirma).toContain('.sello-img{background-image:url("data:image/png;base64,CCCC")}')
+  })
+
+  it('mantiene el área del sello en 8.5 × 5.5 cm sin deformar la imagen', () => {
+    const html = crearHtmlDocumento(
+      [crearPaginaRegular(documento(), sello, RECURSOS_VACIOS)],
+      RECURSOS_VACIOS,
+    )
+
+    expect(html).toContain(
+      '.sello-img { position: absolute; left: 50%; top: 0; transform: translateX(-50%); width: 8.5cm; height: 5.5cm; background-repeat: no-repeat; background-position: center; background-size: contain; }',
+    )
   })
 })

@@ -16,6 +16,7 @@ interface FilaConstancia {
   es_personalizado: number // SQLite no tiene booleano real; usa 0/1
   tipo_documento: string
   numero_para_persona_evento: number
+  universidad_origen: string | null
   fecha_generacion: string
   folio_interno: string
   estado: string
@@ -40,6 +41,7 @@ function mapearFila(fila: FilaConstancia): Constancia {
     esPersonalizado: fila.es_personalizado === 1,
     tipoDocumento: fila.tipo_documento as Constancia['tipoDocumento'],
     numeroParaPersonaEvento: fila.numero_para_persona_evento,
+    universidadOrigen: fila.universidad_origen,
     fechaGeneracion: fila.fecha_generacion,
     folioInterno: fila.folio_interno,
     estado: fila.estado as EstadoConstancia,
@@ -104,11 +106,11 @@ export function crearConstanciaConParticipantes(datos: ConstanciaConParticipante
   const insertarConstancia = db.prepare(`
     INSERT INTO constancia (
       evento_id, rol_id, ponencia, texto_generado, es_personalizado,
-      tipo_documento, numero_para_persona_evento, fecha_generacion,
+      tipo_documento, numero_para_persona_evento, universidad_origen, fecha_generacion,
       folio_interno, estado
     ) VALUES (
       @eventoId, @rolId, @ponencia, @textoGenerado, @esPersonalizado,
-      @tipoDocumento, @numeroParaPersonaEvento, @fechaGeneracion,
+      @tipoDocumento, @numeroParaPersonaEvento, @universidadOrigen, @fechaGeneracion,
       @folioInterno, @estado
     )
   `)
@@ -132,6 +134,7 @@ export function crearConstanciaConParticipantes(datos: ConstanciaConParticipante
         esPersonalizado: datosConstancia.constancia.esPersonalizado ? 1 : 0,
         tipoDocumento: datosConstancia.constancia.tipoDocumento,
         numeroParaPersonaEvento: datosConstancia.constancia.numeroParaPersonaEvento,
+        universidadOrigen: datosConstancia.constancia.universidadOrigen,
         fechaGeneracion: datosConstancia.constancia.fechaGeneracion,
         folioInterno: datosConstancia.constancia.folioInterno,
         estado: datosConstancia.constancia.estado,

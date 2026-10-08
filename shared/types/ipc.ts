@@ -1,3 +1,5 @@
+import type { TipoPlantilla } from './evento'
+
 /**
  * Una fila del Excel ya combinada con el resultado de normalizar su
  * nombre. Es lo que el proceso main le entrega a React para la vista
@@ -51,6 +53,10 @@ export interface GuardarLoteResultado {
   reconocimientosCreados: number
   constanciasPendientes: number
   foliosInternos: string[]
+}
+
+export interface ListarEventosReimprimiblesEntrada {
+  tipoPlantilla: TipoPlantilla
 }
 
 export interface GenerarPdfsEntrada {

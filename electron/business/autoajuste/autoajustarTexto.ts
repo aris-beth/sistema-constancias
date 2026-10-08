@@ -57,54 +57,79 @@ function obtenerReglasPorTipoCampo(tipoCampo: TipoCampoAutoajuste): NivelAutoaju
 
 /**
  * Reparte una lista de "unidades" (palabras, o nombres ya separados por
- * comas) en como máximo `maxGrupos` líneas, tratando de que cada línea
- * tenga una longitud de texto parecida — en vez de, por ejemplo, meter 5
- * palabras en la primera línea y 1 sola en la segunda.
+ * comas) en exactamente min(maxGrupos, unidades.length) líneas contiguas,
+ * eligiendo los cortes que minimizan la suma de cuadrados de los anchos
+ * REALES de línea (incluyendo los separadores y la coma final de las
+ * líneas intermedias). Es decir: el reparto más parejo posible sin cortar
+ * una unidad (un nombre o una palabra) a la mitad.
  *
- * Es un algoritmo goloso (greedy) de una sola pasada: por cada unidad,
- * decide si cierra el grupo/línea actual y abre uno nuevo comparando la
- * longitud acumulada contra el promedio objetivo, siempre y cuando
- * todavía queden líneas disponibles para lo que falta por colocar.
+ * Se resuelve con programación dinámica (partición lineal): para el
+ * tamaño de los textos de este sistema (decenas de unidades, máximo 3
+ * líneas) el costo es despreciable, y a diferencia de un algoritmo goloso
+ * garantiza el óptimo, de modo que nunca deja una línea con 3 nombres y
+ * la siguiente con uno solo si existe un reparto mejor.
+ *
+ * @param separador   caracteres entre unidades de una misma línea (", " = 2, " " = 1)
+ * @param comaAlFinal caracteres que se agregan al final de cada línea que NO es la última
  */
-function particionarBalanceado(unidades: string[], maxGrupos: number): string[][] {
-  if (unidades.length === 0) {
+function particionarBalanceado(
+  unidades: string[],
+  maxGrupos: number,
+  separador: number,
+  comaAlFinal: number,
+): string[][] {
+  const total = unidades.length
+  if (total === 0) {
     return [[]]
   }
 
-  const grupos = Math.max(1, Math.min(maxGrupos, unidades.length))
-  const longitudTotal = unidades.reduce((acumulado, unidad) => acumulado + unidad.length, 0)
-  const longitudObjetivoPorGrupo = longitudTotal / grupos
+  const grupos = Math.max(1, Math.min(maxGrupos, total))
+
+  // acumulado[i] = suma de longitudes de las primeras i unidades.
+  const acumulado: number[] = [0]
+  for (const unidad of unidades) {
+    acumulado.push(acumulado[acumulado.length - 1] + unidad.length)
+  }
+
+  // Ancho impreso de la línea formada por unidades[desde..hasta).
+  const anchoLinea = (desde: number, hasta: number): number => {
+    const cantidad = hasta - desde
+    const base = acumulado[hasta] - acumulado[desde] + separador * (cantidad - 1)
+    return hasta < total ? base + comaAlFinal : base
+  }
+
+  const INFINITO = Number.POSITIVE_INFINITY
+  // costo[g][j]: mejor costo de repartir las primeras j unidades en g líneas.
+  const costo: number[][] = Array.from({ length: grupos + 1 }, () =>
+    new Array<number>(total + 1).fill(INFINITO),
+  )
+  // corte[g][j]: índice donde empieza la línea g en el mejor reparto.
+  const corte: number[][] = Array.from({ length: grupos + 1 }, () =>
+    new Array<number>(total + 1).fill(0),
+  )
+  costo[0][0] = 0
+
+  for (let g = 1; g <= grupos; g += 1) {
+    for (let j = g; j <= total; j += 1) {
+      for (let i = g - 1; i < j; i += 1) {
+        if (costo[g - 1][i] === INFINITO) continue
+        const ancho = anchoLinea(i, j)
+        const candidato = costo[g - 1][i] + ancho * ancho
+        if (candidato < costo[g][j]) {
+          costo[g][j] = candidato
+          corte[g][j] = i
+        }
+      }
+    }
+  }
 
   const resultado: string[][] = []
-  let grupoActual: string[] = []
-  let longitudGrupoActual = 0
-  let unidadesColocadas = 0
-
-  for (const unidad of unidades) {
-    const unidadesRestantesDespuesDeEsta = unidades.length - unidadesColocadas - 1
-    const gruposUsados = resultado.length + (grupoActual.length > 0 ? 1 : 0)
-    const hayGruposDisponiblesParaElResto = gruposUsados < grupos
-
-    if (
-      grupoActual.length > 0 &&
-      longitudGrupoActual + unidad.length > longitudObjetivoPorGrupo &&
-      hayGruposDisponiblesParaElResto &&
-      unidadesRestantesDespuesDeEsta >= 0
-    ) {
-      resultado.push(grupoActual)
-      grupoActual = []
-      longitudGrupoActual = 0
-    }
-
-    grupoActual.push(unidad)
-    longitudGrupoActual += unidad.length
-    unidadesColocadas += 1
+  let fin = total
+  for (let g = grupos; g >= 1; g -= 1) {
+    const inicio = corte[g][fin]
+    resultado.unshift(unidades.slice(inicio, fin))
+    fin = inicio
   }
-
-  if (grupoActual.length > 0) {
-    resultado.push(grupoActual)
-  }
-
   return resultado
 }
 
@@ -117,7 +142,10 @@ function particionarBalanceado(unidades: string[], maxGrupos: number): string[][
  * largo), reparte por palabras.
  */
 function distribuirEnLineas(texto: string, maxLineas: number): string[] {
-  const textoLimpio = texto.trim()
+  // Cualquier salto de línea, tabulador o espacio repetido (frecuentes en
+  // celdas de Excel) se normaliza a un solo espacio para que el reparto
+  // dependa solo del contenido y no del formato original de la celda.
+  const textoLimpio = texto.replace(/\s+/g, ' ').trim()
   if (!textoLimpio) {
     return ['']
   }
@@ -131,13 +159,17 @@ function distribuirEnLineas(texto: string, maxLineas: number): string[] {
         .split(',')
         .map((segmento) => segmento.trim())
         .filter((segmento) => segmento.length > 0)
-    : textoLimpio.split(/\s+/).filter((palabra) => palabra.length > 0)
+    : textoLimpio.split(' ').filter((palabra) => palabra.length > 0)
 
   if (unidades.length <= 1) {
     return [textoLimpio]
   }
 
-  const grupos = particionarBalanceado(unidades, maxLineas)
+  // Separador entre nombres: ", " (2 caracteres). Entre palabras: " " (1).
+  // En listas, cada línea intermedia termina con "," (1 carácter extra).
+  const grupos = esListaConComas
+    ? particionarBalanceado(unidades, maxLineas, 2, 1)
+    : particionarBalanceado(unidades, maxLineas, 1, 0)
 
   return grupos.map((grupo, indice) => {
     const esUltimoGrupo = indice === grupos.length - 1
@@ -155,7 +187,7 @@ export function autoajustarTexto(
   texto: string,
   tipoCampo: TipoCampoAutoajuste,
 ): ResultadoAutoajuste {
-  const textoLimpio = texto.trim()
+  const textoLimpio = texto.replace(/\s+/g, ' ').trim()
   if (!textoLimpio) {
     throw new Error(`No se puede autoajustar un texto de "${tipoCampo}" vacío.`)
   }

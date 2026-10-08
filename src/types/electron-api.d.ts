@@ -19,7 +19,9 @@ import type {
   RegistrarFolioEntrada,
   EstadisticasEntrada,
   EstadisticasResultado,
+  ListarEventosReimprimiblesEntrada,
 } from '../../shared/types/ipc'
+import type { Evento } from '../../shared/types/evento'
 import type {
   ConfiguracionSello,
   ConfiguracionFirmantesGraduacion,
@@ -38,6 +40,7 @@ declare global {
       guardarLote: (entrada: GuardarLoteEntrada) => Promise<GuardarLoteResultado>
       guardarGraduacion: (entrada: GuardarGraduacionEntrada) => Promise<GuardarGraduacionResultado>
       generarPdfs: (entrada: GenerarPdfsEntrada) => Promise<GenerarPdfsResultado>
+      listarEventosReimprimibles: (entrada: ListarEventosReimprimiblesEntrada) => Promise<Evento[]>
       seleccionarCarpetaDestino: () => Promise<string | null>
       previsualizarDocumento: (entrada: PrevisualizarEntrada) => Promise<string>
       obtenerConfiguracion: () => Promise<ConfiguracionInicial>

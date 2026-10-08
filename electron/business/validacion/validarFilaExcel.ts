@@ -120,7 +120,10 @@ export function validarFilaExcel(
 
   if (!fila.participaComo.trim()) {
     errores.push(`${prefijo}: falta el rol de participación.`)
-  } else if (!rolesNormalizados.has(normalizarValorCatalogo(fila.participaComo))) {
+  } else if (
+    !fila.textoPersonalizado?.trim() &&
+    !rolesNormalizados.has(normalizarValorCatalogo(fila.participaComo))
+  ) {
     errores.push(
       `${prefijo}: el rol '${fila.participaComo}' no está en el catálogo de roles reconocidos.`,
     )

@@ -96,3 +96,19 @@ export function listarEventosPorTipoPlantilla(tipoPlantilla: TipoPlantilla): Eve
     .all(tipoPlantilla) as FilaEvento[]
   return filas.map(mapearFila)
 }
+
+export function listarEventosReimprimibles(tipoPlantilla: TipoPlantilla): Evento[] {
+  const db = obtenerBaseDeDatos()
+  const filas = db
+    .prepare(
+      `SELECT e.* FROM evento e
+       WHERE e.tipo_plantilla = ?
+         AND EXISTS (
+           SELECT 1 FROM constancia c
+           WHERE c.evento_id = e.id AND c.estado = 'generada'
+         )
+       ORDER BY e.id DESC`,
+    )
+    .all(tipoPlantilla) as FilaEvento[]
+  return filas.map(mapearFila)
+}

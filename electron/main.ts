@@ -9,6 +9,7 @@ import { guardarLoteGraduacion } from './db/repositories/graduacion.repository'
 import type { GuardarGraduacionEntrada } from '../shared/types/ipc'
 import { registrarManejadorGuardarLote } from './ipc/guardarLote.handlers'
 import { registrarManejadorGenerarPdfs } from './ipc/pdf.handlers'
+import { registrarManejadoresEvento } from './ipc/evento.handlers'
 import { registrarManejadoresConfiguracion } from './ipc/configuracion.handlers'
 import { registrarManejadorEstadisticas } from './ipc/estadisticas.handlers'
 
@@ -74,6 +75,7 @@ app.whenReady().then(() => {
   )
   registrarManejadorGuardarLote()
   registrarManejadorGenerarPdfs()
+  registrarManejadoresEvento()
   registrarManejadoresConfiguracion()
   registrarManejadorEstadisticas()
 

@@ -185,7 +185,7 @@ function encabezadoInstitucional(encabezado: string): string {
   return `<header class="encabezado-inst">
         <div class="universidad">La Benemérita Universidad Autónoma de Puebla</div>
         <div class="subtitulo">A través de la Facultad de Ciencias de la Computación</div>
-        <div class="subtitulo otorga">otorga el presente</div>
+        <div class="subtitulo otorga">otorga la presente</div>
         <div class="titulo-doc">${escaparHtml(encabezado)}</div>
       </header>`
 }
@@ -306,8 +306,8 @@ export function crearHtmlDocumento(
       /* Columna del logo + barra vertical (medidas tomadas de la plantilla) */
       .col-izq { position: absolute; left: 0.2in; top: 1.17in; width: 2.5in; height: 6.18in; display: flex; flex-direction: column; justify-content: space-between; align-items: center; }
       .logo { width: 2.46in; aspect-ratio: 292 / 386; background-repeat: no-repeat; background-position: center; background-size: contain; }
-      /* Folio en la parte baja de la columna izquierda. */
-      .folio-bloque { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; width: 100%; min-height: 1.05in; }
+      /* Folio centrado en el espacio entre el escudo y el borde inferior. */
+      .folio-bloque { display: flex; flex: 1 1 auto; flex-direction: column; align-items: center; justify-content: center; width: 100%; min-height: 1.05in; }
       .folio { font-size: 10pt; font-weight: 600; text-align: center; overflow-wrap: anywhere; }
       .barra { position: absolute; left: 2.82in; top: 1.17in; width: 0.055in; height: 6.18in; background: #244061; }
 
@@ -322,7 +322,7 @@ export function crearHtmlDocumento(
       .centro { flex: 1 1 auto; min-height: 0; width: 100%; display: flex; flex-direction: column; justify-content: flex-start; align-items: center; margin-top: 0.196in; }
       .bloque-texto { display: flex; flex-direction: column; align-items: center; width: 100%; }
       .destinatario { font-size: 16pt; line-height: 1.2; max-width: 6.7in; overflow-wrap: anywhere; }
-      .destinatario .prefijo { font-weight: 400; }
+      .destinatario .prefijo { font-weight: 700; }
       .destinatario strong { font-weight: 700; }
       .institucion { font-size: 13pt; margin-top: 0.06in; }
       .cuerpo { font-size: 12pt; line-height: 1.3; max-width: 6.5in; margin-top: 0.12in; overflow-wrap: anywhere; text-wrap: balance; }
@@ -341,7 +341,7 @@ export function crearHtmlDocumento(
       .sello-texto { position: absolute; left: 0; top: 0.17in; width: 100%; text-align: center; }
       .sello-texto .lema { font-size: 12pt; font-weight: 700; line-height: 1.45; }
       .sello-texto .fecha { font-size: 12pt; line-height: 1.45; }
-      .sello-img { position: absolute; left: 0.33in; top: 0; width: 3.26in; height: 2.17in; background-repeat: no-repeat; background-position: center; background-size: contain; }
+      .sello-img { position: absolute; left: 50%; top: 0; transform: translateX(-50%); width: 8.5cm; height: 5.5cm; background-repeat: no-repeat; background-position: center; background-size: contain; }
       .sello-firmante { position: absolute; left: 0; top: 1.72in; width: 100%; text-align: center; font-size: 12pt; line-height: 1.3; }
       .sello-firmante strong { font-weight: 700; display: block; }
 

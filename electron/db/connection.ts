@@ -52,6 +52,12 @@ function ejecutarMigraciones(db: Database.Database): void {
   }>
   const nombresColumnas = new Set(columnasConstancia.map((columna) => columna.name))
 
+  if (!nombresColumnas.has('universidad_origen')) {
+    // Los registros antiguos solo tenían la universidad en el participante,
+    // un dato compartido entre eventos que puede no corresponder a esta constancia.
+    db.exec('ALTER TABLE constancia ADD COLUMN universidad_origen TEXT')
+  }
+
   if (!nombresColumnas.has('estado')) {
     // Backfill deliberado a 'generada': estas filas ya existían antes de
     // que el sistema distinguiera pendiente/generada, lo que en la

@@ -58,6 +58,8 @@ export function obtenerRolPorNombre(nombreRol: string): Rol | null {
 
 export function listarRoles(): Rol[] {
   const db = obtenerBaseDeDatos()
-  const filas = db.prepare('SELECT * FROM rol ORDER BY nombre_rol').all() as FilaRol[]
+  const filas = db
+    .prepare("SELECT * FROM rol WHERE TRIM(plantilla_texto) <> '' ORDER BY nombre_rol")
+    .all() as FilaRol[]
   return filas.map(mapearFila)
 }

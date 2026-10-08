@@ -115,7 +115,7 @@ export function registrarManejadorGenerarPdfs(): void {
       const filas = obtenerBaseDeDatos()
         .prepare(
           `SELECT r.nombre_rol, c.folio_interno, c.tipo_documento, c.ponencia, c.texto_generado,
-             e.fecha_constancia, p.nombre_normalizado, p.nombre_original, p.universidad_origen
+             e.fecha_constancia, p.nombre_normalizado, p.nombre_original, c.universidad_origen
            FROM constancia c
            JOIN rol r ON r.id = c.rol_id
            JOIN evento e ON e.id = c.evento_id

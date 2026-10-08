@@ -1,5 +1,6 @@
 // src/pantallas/PantallaCarga.tsx
-import React from 'react';
+import React, { useState } from 'react';
+import type { Evento } from '../../shared/types/evento';
 import '../styles/design-system.css';
 
 export type ModoConstancia = 'regular' | 'graduacion';
@@ -12,6 +13,8 @@ interface PantallaCargaProps {
   // No reciben un File: el diálogo nativo elige el archivo por su ruta en disco.
   manejarCargarExcel: () => void;
   manejarCargarGraduacion: () => void;
+  listarEventosReimprimibles: () => Promise<Evento[]>;
+  onReimprimir: (folio: string) => void;
   cargando?: boolean;
 }
 
@@ -20,8 +23,14 @@ export const PantallaCarga: React.FC<PantallaCargaProps> = ({
   onCambiarModo,
   manejarCargarExcel,
   manejarCargarGraduacion,
+  listarEventosReimprimibles,
+  onReimprimir,
   cargando = false,
 }) => {
+  const [eventosGuardados, setEventosGuardados] = useState<Evento[] | null>(null);
+  const [folioSeleccionado, setFolioSeleccionado] = useState('');
+  const [cargandoEventos, setCargandoEventos] = useState(false);
+  const [errorReimpresion, setErrorReimpresion] = useState<string | null>(null);
   const titulo = modo === 'graduacion' 
     ? 'SISTEMA DE RECONOCIMIENTOS GRADUACIÓN' 
     : 'SISTEMA DE CONSTANCIAS';
@@ -33,6 +42,27 @@ export const PantallaCarga: React.FC<PantallaCargaProps> = ({
     } else {
       manejarCargarExcel();
     }
+  };
+
+  const handleMostrarEventos = async () => {
+    setCargandoEventos(true);
+    setErrorReimpresion(null);
+    setEventosGuardados(null);
+    setFolioSeleccionado('');
+    try {
+      setEventosGuardados(await listarEventosReimprimibles());
+    } catch (error) {
+      setErrorReimpresion(error instanceof Error ? error.message : String(error));
+    } finally {
+      setCargandoEventos(false);
+    }
+  };
+
+  const handleCambiarModo = (nuevoModo: ModoConstancia) => {
+    setEventosGuardados(null);
+    setFolioSeleccionado('');
+    setErrorReimpresion(null);
+    onCambiarModo(nuevoModo);
   };
 
   return (
@@ -60,15 +90,54 @@ export const PantallaCarga: React.FC<PantallaCargaProps> = ({
 
       <div className="carga-enlaces">
         {modo === 'regular' ? (
-          <button className="enlace-institucional" onClick={() => onCambiarModo('graduacion')}>
+          <button className="enlace-institucional" onClick={() => handleCambiarModo('graduacion')}>
             Cargar plantilla para RECONOCIMIENTO GRADUACIÓN
           </button>
         ) : (
-          <button className="enlace-institucional" onClick={() => onCambiarModo('regular')}>
+          <button className="enlace-institucional" onClick={() => handleCambiarModo('regular')}>
             Cargar plantilla para CONSTANCIAS REGULARES
           </button>
         )}
       </div>
+
+      <section className="reimpresion-panel" aria-label="Reimpresión de lotes guardados">
+        <button
+          className="enlace-institucional"
+          onClick={handleMostrarEventos}
+          disabled={cargando || cargandoEventos}
+        >
+          {cargandoEventos ? 'Buscando eventos…' : 'Reimprimir lote guardado'}
+        </button>
+        {errorReimpresion && <p className="mensaje-error-carga" role="alert">{errorReimpresion}</p>}
+        {eventosGuardados !== null && (
+          eventosGuardados.length === 0 ? (
+            <p>No hay eventos guardados disponibles para reimprimir.</p>
+          ) : (
+            <div className="reimpresion-controles">
+              <label htmlFor="evento-reimpresion">Selecciona el evento que deseas reimprimir:</label>
+              <select
+                id="evento-reimpresion"
+                value={folioSeleccionado}
+                onChange={(evento) => setFolioSeleccionado(evento.target.value)}
+              >
+                <option value="">Selecciona un evento</option>
+                {eventosGuardados.map((evento) => (
+                  <option key={evento.id} value={evento.folio}>
+                    {evento.folio} — {evento.nombreEvento} ({evento.fechaConstancia})
+                  </option>
+                ))}
+              </select>
+              <button
+                className="btn-institucional"
+                onClick={() => onReimprimir(folioSeleccionado)}
+                disabled={!folioSeleccionado}
+              >
+                CONTINUAR A REIMPRESIÓN
+              </button>
+            </div>
+          )
+        )}
+      </section>
     </div>
   );
 };

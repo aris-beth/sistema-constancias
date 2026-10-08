@@ -54,6 +54,19 @@ describe('validarFilaExcel', () => {
     expect(resultado.errores).toContain(`Fila 15: ${mensaje}`)
   })
 
+  it('acepta un rol desconocido cuando la fila tiene texto personalizado', () => {
+    const resultado = validarFilaExcel(
+      {
+        ...filaValida,
+        participaComo: 'Invitado especial',
+        textoPersonalizado: 'Texto escrito para esta constancia.',
+      },
+      roles,
+    )
+
+    expect(resultado).toEqual({ valida: true, errores: [] })
+  })
+
   it('reporta los seis tipos de error bloqueante en una sola fila', () => {
     const resultado = validarFilaExcel(
       {

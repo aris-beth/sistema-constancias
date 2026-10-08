@@ -43,6 +43,20 @@ describe('orquestarGuardadoLote', () => {
     expect(resultado.filasOmitidas).toEqual([])
   })
 
+  it('conserva la universidad de origen propia de la constancia', () => {
+    const resultado = orquestarGuardadoLote(
+      [
+        {
+          ...fila(2, [{ id: 1, conteoPrevio: 0 }]),
+          universidadOrigen: 'Colegio de Postgraduados',
+        },
+      ],
+      'EVT-006',
+    )
+
+    expect(resultado.constancias[0].universidadOrigen).toBe('Colegio de Postgraduados')
+  })
+
   it('acepta diferencias de mayúsculas, espacios y formato equivalente de fecha', () => {
     const resultado = orquestarGuardadoLote(
       [

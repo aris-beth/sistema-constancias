@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS constancia (
   es_personalizado INTEGER NOT NULL DEFAULT 0,
   tipo_documento TEXT NOT NULL CHECK (tipo_documento IN ('constancia', 'reconocimiento')),
   numero_para_persona_evento INTEGER NOT NULL DEFAULT 1,
+  universidad_origen TEXT,
   fecha_generacion TEXT NOT NULL,
   folio_interno TEXT UNIQUE NOT NULL,
   estado TEXT NOT NULL DEFAULT 'generada' CHECK (estado IN ('pendiente', 'generada'))

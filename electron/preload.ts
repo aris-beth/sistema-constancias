@@ -20,7 +20,9 @@ import type {
   RegistrarFolioEntrada,
   EstadisticasEntrada,
   EstadisticasResultado,
+  ListarEventosReimprimiblesEntrada,
 } from '../shared/types/ipc'
+import type { Evento } from '../shared/types/evento'
 
 // Cada función que agregamos aquí es una función real que React podrá
 // llamar como si fuera una API normal (window.electronAPI.cargarExcel()),
@@ -44,6 +46,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('excel:guardarGraduacion', entrada),
   generarPdfs: (entrada: GenerarPdfsEntrada): Promise<GenerarPdfsResultado> =>
     ipcRenderer.invoke('pdf:generar', entrada),
+  listarEventosReimprimibles: (entrada: ListarEventosReimprimiblesEntrada): Promise<Evento[]> =>
+    ipcRenderer.invoke('evento:listarReimprimibles', entrada.tipoPlantilla),
   seleccionarCarpetaDestino: (): Promise<string | null> =>
     ipcRenderer.invoke('pdf:seleccionarCarpeta'),
   previsualizarDocumento: (entrada: PrevisualizarEntrada): Promise<string> =>

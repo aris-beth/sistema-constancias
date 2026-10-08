@@ -11,6 +11,7 @@ export interface FilaLoteResuelta {
   nombrePonencia: string | null
   textoGenerado: string
   esPersonalizado: boolean
+  universidadOrigen: string | null
   participantes: Array<{
     id: number
     nombreNormalizado: string
@@ -31,6 +32,7 @@ export interface ConstanciaOrquestada {
   ponencia: string | null
   textoGenerado: string
   esPersonalizado: boolean
+  universidadOrigen: string | null
   tipoDocumento: TipoDocumento
   numeroParaPersonaEvento: number
   participanteIds: number[]
@@ -86,6 +88,7 @@ export function orquestarGuardadoLote(
       ponencia: fila.nombrePonencia,
       textoGenerado: fila.textoGenerado,
       esPersonalizado: fila.esPersonalizado,
+      universidadOrigen: fila.universidadOrigen,
       tipoDocumento: resultados.some((resultado) => resultado.tipoDocumento === 'reconocimiento')
         ? 'reconocimiento'
         : 'constancia',

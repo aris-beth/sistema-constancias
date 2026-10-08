@@ -269,6 +269,37 @@ body {
   text-decoration-color: var(--color-institucional);
 }
 
+.reimpresion-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 500px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-borde);
+}
+
+.reimpresion-controles {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+}
+
+.reimpresion-controles select {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--color-borde);
+  border-radius: 8px;
+  background: var(--color-superficie);
+  color: var(--color-texto-principal);
+  font: inherit;
+}
+
 /* --- Pantalla de Validación (T-UI3) --- */
 .validacion-layout {
   display: flex;
@@ -836,12 +867,19 @@ body {
 .image-preview, .image-placeholder { display: grid; place-items: center; width: 100%; height: 112px; border-radius: var(--radio-input); background: var(--color-institucional-light); color: var(--color-texto-secundario); object-fit: contain; }
 .folio-form { display: flex; align-items: end; gap: 16px; margin-bottom: 16px; }
 .folio-form .field { flex: 1; }
+.catalogo-tools { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.catalogo-search { flex: 1; max-width: 520px; }
+.catalogo-row-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.catalogo-edit-field { display: block; min-width: 150px; }
+.catalogo-result-count { margin: 12px 0 0; color: var(--color-texto-secundario); font-size: 0.875rem; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 
 @media (max-width: 720px) {
   .app-shell { width: min(100% - 24px, 1600px); padding-top: 24px; }
   .editor-layout, .image-grid, .form-grid { grid-template-columns: 1fr; }
   .editor-actions { position: static; }
-  .folio-form { align-items: stretch; flex-direction: column; }
+  .folio-form, .catalogo-tools { align-items: stretch; flex-direction: column; }
+  .catalogo-search { max-width: none; }
 }
 
 .catalogo-header, .stats-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 24px; }

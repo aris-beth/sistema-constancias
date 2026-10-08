@@ -30,6 +30,7 @@ export interface Constancia {
   esPersonalizado: boolean
   tipoDocumento: TipoDocumento
   numeroParaPersonaEvento: number
+  universidadOrigen: string | null
   fechaGeneracion: string
   /** Identificador único por documento (sección 2.1 de requerimientos),
    * distinto del folio del evento. Formato: "{folioEvento}-{consecutivo}". */

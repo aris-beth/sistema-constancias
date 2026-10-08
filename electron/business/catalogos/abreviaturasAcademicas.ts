@@ -6,26 +6,26 @@ export interface EntradaAbreviatura {
 }
 
 export const CATALOGO_ABREVIATURAS_BASE: EntradaAbreviatura[] = [
-  { formaEncontrada: 'DOCTOR', abreviaturaAceptada: 'Dr.' },
-  { formaEncontrada: 'DR', abreviaturaAceptada: 'Dr.' },
-  { formaEncontrada: 'DOCTORA', abreviaturaAceptada: 'Dra.' },
-  { formaEncontrada: 'DRA', abreviaturaAceptada: 'Dra.' },
+  { formaEncontrada: 'DOCTOR', abreviaturaAceptada: 'DR.' },
+  { formaEncontrada: 'DR', abreviaturaAceptada: 'DR.' },
+  { formaEncontrada: 'DOCTORA', abreviaturaAceptada: 'DRA.' },
+  { formaEncontrada: 'DRA', abreviaturaAceptada: 'DRA.' },
 
-  { formaEncontrada: 'MAESTRO', abreviaturaAceptada: 'Mtro.' },
-  { formaEncontrada: 'MTRO', abreviaturaAceptada: 'Mtro.' },
-  { formaEncontrada: 'MAESTRA', abreviaturaAceptada: 'Mtra.' },
-  { formaEncontrada: 'MTRA', abreviaturaAceptada: 'Mtra.' },
+  { formaEncontrada: 'MAESTRO', abreviaturaAceptada: 'MTRO.' },
+  { formaEncontrada: 'MTRO', abreviaturaAceptada: 'MTRO.' },
+  { formaEncontrada: 'MAESTRA', abreviaturaAceptada: 'MTRA.' },
+  { formaEncontrada: 'MTRA', abreviaturaAceptada: 'MTRA.' },
   { formaEncontrada: 'MC', abreviaturaAceptada: 'M.C.' },
   { formaEncontrada: 'M. C.', abreviaturaAceptada: 'M.C.' },
   { formaEncontrada: 'MI', abreviaturaAceptada: 'M.I.' },
 
-  { formaEncontrada: 'INGENIERO', abreviaturaAceptada: 'Ing.' },
-  { formaEncontrada: 'ING', abreviaturaAceptada: 'Ing.' },
-  { formaEncontrada: 'INGENIERA', abreviaturaAceptada: 'Ing.' },
+  { formaEncontrada: 'INGENIERO', abreviaturaAceptada: 'ING.' },
+  { formaEncontrada: 'ING', abreviaturaAceptada: 'ING.' },
+  { formaEncontrada: 'INGENIERA', abreviaturaAceptada: 'ING.' },
 
-  { formaEncontrada: 'LICENCIADO', abreviaturaAceptada: 'Lic.' },
-  { formaEncontrada: 'LIC', abreviaturaAceptada: 'Lic.' },
-  { formaEncontrada: 'LICENCIADA', abreviaturaAceptada: 'Lic.' },
+  { formaEncontrada: 'LICENCIADO', abreviaturaAceptada: 'LIC.' },
+  { formaEncontrada: 'LIC', abreviaturaAceptada: 'LIC.' },  
+  { formaEncontrada: 'LICENCIADA', abreviaturaAceptada: 'LIC.' },
 ]
 
 /**

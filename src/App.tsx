@@ -17,6 +17,7 @@ import {
   registroAFilaCrudaGraduacion,
 } from './utils/registros';
 import type { FilaProcesada, FilaProcesadaGraduacion } from '../shared/types/ipc';
+import type { Evento } from '../shared/types/evento';
 import './styles/design-system.css';
 
 type PasoConstancias = 'carga' | 'validacion' | 'previsualizacion' | 'generar';
@@ -45,8 +46,9 @@ const App: React.FC = () => {
   const [generando, setGenerando] = useState(false);
   const [resultadoGeneracion, setResultadoGeneracion] = useState<ResumenGeneracion | null>(null);
   // Folio con el que el lote ya quedó guardado en la base. Sirve para que un
-  // reintento (p. ej. si falló solo el PDF) no intente guardar el evento otra vez.
+  // reintento (p. ej. si falló solo el PDF) no vuelva a reemplazar el lote.
   const [folioPersistido, setFolioPersistido] = useState<string | null>(null);
+  const [esReimpresion, setEsReimpresion] = useState(false);
 
   // Función de bloqueo de navegación
   const tieneErroresBloqueantes =
@@ -65,7 +67,16 @@ const App: React.FC = () => {
 
   const manejarRegresar = () => {
     switch (pasoConstancias) {
-      case 'generar': setPasoConstancias('previsualizacion'); break;
+      case 'generar':
+        if (esReimpresion) {
+          setEsReimpresion(false);
+          setFolioPersistido(null);
+          setFolioEvento('');
+          setPasoConstancias('carga');
+        } else {
+          setPasoConstancias('previsualizacion');
+        }
+        break;
       case 'previsualizacion': setPasoConstancias('validacion'); break;
       case 'validacion': setPasoConstancias('carga'); break;
       default: break;
@@ -138,6 +149,8 @@ const App: React.FC = () => {
       if (!resultado) return; // el usuario canceló el diálogo nativo
       reiniciarEdicion();
       setFolioPersistido(null);
+      setFolioEvento('');
+      setEsReimpresion(false);
       setResultadoGeneracion(null);
       setRegistros(resultado.filas.map(filaARegistro));
       setErrores(erroresDeFilas(resultado.filas));
@@ -159,6 +172,8 @@ const App: React.FC = () => {
       if (!resultado) return; // el usuario canceló el diálogo nativo
       reiniciarEdicion();
       setFolioPersistido(null);
+      setFolioEvento('');
+      setEsReimpresion(false);
       setResultadoGeneracion(null);
       setRegistros(resultado.filas.map(filaGraduacionARegistro));
       setErrores(erroresDeFilas(resultado.filas));
@@ -259,14 +274,25 @@ const App: React.FC = () => {
     }
   };
 
+  const listarEventosParaReimpresion = async (): Promise<Evento[]> =>
+    window.electronAPI.listarEventosReimprimibles({ tipoPlantilla: modoConstancia });
+
+  const manejarReimprimirEvento = (folio: string) => {
+    setFolioEvento(folio);
+    setFolioPersistido(folio);
+    setEsReimpresion(true);
+    setResultadoGeneracion(null);
+    setPasoConstancias('generar');
+  };
+
   const manejarGenerar = async () => {
     if (generando || !rutaSalida) return;
     setGenerando(true);
     setResultadoGeneracion(null);
 
     try {
-      // 1) Guardar el lote en la base (una sola vez por folio). Si el folio
-      // está vacío, el sistema lo genera automáticamente al guardar.
+      // 1) Guardar el lote. Un folio ya existente reemplaza sus constancias
+      // para permitir volver a generar el evento después de editar el Excel.
       let folio = folioEvento.trim();
       const guardarLote = async (): Promise<string> => {
         const guardado = modoConstancia === 'regular'
@@ -335,6 +361,8 @@ const App: React.FC = () => {
               onCambiarModo={setModoConstancia}
               manejarCargarExcel={manejarCargarExcel}
               manejarCargarGraduacion={manejarCargarGraduacion}
+              listarEventosReimprimibles={listarEventosParaReimpresion}
+              onReimprimir={manejarReimprimirEvento}
               cargando={cargandoArchivo}
             />
             {errorCarga && <p className="mensaje-error-carga">{errorCarga}</p>}
