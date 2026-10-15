@@ -19,8 +19,8 @@ export interface ResultadoTextoConstancia {
 }
 
 const PLANTILLAS_POR_ROL: Record<string, string> = {
-  ORGANIZADOR: 'Por participar como {PARTICIPA_COMO}, en el evento {EVENTO}, {SEDE}.',
-  ORGANIZADORA: 'Por participar como {PARTICIPA_COMO}, en el evento {EVENTO}, {SEDE}.',
+  ORGANIZADOR: 'Por haber participado como {PARTICIPA_COMO}, en el evento {EVENTO}, {SEDE}.',
+  ORGANIZADORA: 'Por ser {PARTICIPA_COMO}, en el evento {EVENTO}, {SEDE}.',
   COLABORADOR: 'Por participar como {PARTICIPA_COMO}, en el evento {EVENTO}, {SEDE}.',
   COLABORADORA: 'Por participar como {PARTICIPA_COMO}, en el evento {EVENTO}, {SEDE}.',
   ASISTENTE: 'Por asistir al evento {EVENTO}, {SEDE}.',

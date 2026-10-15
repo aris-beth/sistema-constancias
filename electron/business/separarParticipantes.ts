@@ -1,13 +1,12 @@
 /**
  * Separa el texto completo de una celda en los nombres individuales que
- * contiene. La agrupación de una constancia grupal depende exclusivamente
- * de comas, como establece el formato de entrada del sistema.
+ * contiene. Acepta comas y la conjunción independiente "y" como
+ * separadores de participantes.
  */
 export function separarParticipantes(textoCompleto: string): string[] {
-  const segmentosPorComa = textoCompleto
+  return textoCompleto
     .split(',')
+    .flatMap((segmento) => segmento.split(/\s+\by\b\s+/i))
     .map((segmento) => segmento.trim())
     .filter((segmento) => segmento.length > 0)
-
-  return segmentosPorComa
 }

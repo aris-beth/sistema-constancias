@@ -37,4 +37,23 @@ describe('procesarFilaExcel', () => {
     expect(resultado.error).toContain('no está en el catálogo')
     expect(resultado.participantes).toHaveLength(0)
   })
+
+  it('normaliza cada nombre de la fila cuando los participantes están unidos por "y"', () => {
+    const resultado = procesarFilaExcel(
+      {
+        ...filaBase,
+        nombreCompleto: 'Juan Perez y Ana Lopez',
+        participaComo: 'Asistente',
+        textoPersonalizado: null,
+      },
+      new Map(),
+      ROLES_RECONOCIDOS,
+    )
+
+    expect(resultado.error).toBeNull()
+    expect(resultado.participantes.map((participante) => participante.nombreNormalizado)).toEqual([
+      'PEREZ JUAN',
+      'LOPEZ ANA',
+    ])
+  })
 })

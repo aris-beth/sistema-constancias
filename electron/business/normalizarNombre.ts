@@ -9,12 +9,12 @@ function separarAbreviaturasPegadas(texto: string): string {
 }
 
 /**
- * Reemplaza separadores comunes ("/", ";") por espacios y colapsa espacios
- * múltiples. Ej: "DOCTOR/JUAN PEREZ" → "DOCTOR JUAN PEREZ".
+ * Reemplaza separadores comunes ("/", ";", guiones) por espacios y colapsa
+ * espacios múltiples. Ej: "DOCTOR/JUAN PEREZ" → "DOCTOR JUAN PEREZ".
  */
 function limpiarSeparadores(texto: string): string {
   return texto
-    .replace(/[/;]+/g, ' ')
+    .replace(/[-‐‑‒–—/;]+/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
 }
@@ -118,11 +118,12 @@ function normalizarPersona(
 /**
  * Normaliza la columna "GRADO ACADÉMICO/NOMBRE COMPLETO" del Excel.
  * Soporta que la celda tenga UNA persona o VARIAS (constancia grupal),
- * separadas por comas y/o por "y" ("Juan Pérez, Ana López y Luis Ruiz").
- * Cada persona se normaliza por separado y el resultado final las junta
- * con ", " — si alguna persona del grupo queda con confianza "baja", el
- * resultado completo se marca como "baja" (para que esa fila se revise
- * en la vista previa, aunque el resto del grupo esté bien).
+ * separadas por comas o por la conjunción independiente "y"
+ * ("Juan Pérez, Ana López y Luis Ruiz").
+ * Cada persona se normaliza por separado; las comas y la conjunción "y"
+ * se conservan en la salida. Si alguna persona del grupo queda con
+ * confianza "baja", el resultado completo se marca como "baja" (para que
+ * esa fila se revise en la vista previa, aunque el resto esté bien).
  *
  * @param nombreOriginal texto tal como viene en la celda del Excel.
  * @param catalogoAbreviaturas mapa (token en mayúsculas sin puntos →
@@ -140,6 +141,9 @@ export function normalizarNombre(
   }
 
   const textoConEspacios = separarAbreviaturasPegadas(nombreOriginal)
+  const partes = textoConEspacios
+    .split(/(,|\s+\by\b\s+)/i)
+    .filter((parte) => parte.trim().length > 0)
   const nombresIndividuales = separarParticipantes(textoConEspacios)
 
   if (nombresIndividuales.length === 0) {
@@ -149,13 +153,22 @@ export function normalizarNombre(
   const resultados = nombresIndividuales.map((nombre) =>
     normalizarPersona(nombre, catalogoAbreviaturas),
   )
+  let indiceNombre = 0
+  const nombreNormalizado = partes
+    .map((parte) => {
+      if (parte === ',') return ', '
+      if (/^\s+y\s+$/i.test(parte)) return ' Y '
+      return resultados[indiceNombre++]?.nombreNormalizado ?? ''
+    })
+    .join('')
+    .trim()
 
   const gradosDetectados = resultados
     .map((resultado) => resultado.gradoDetectado)
     .filter((grado): grado is string => grado !== null)
 
   return {
-    nombreNormalizado: resultados.map((resultado) => resultado.nombreNormalizado).join(', '),
+    nombreNormalizado,
     gradoDetectado: gradosDetectados.length > 0 ? gradosDetectados[0] : null,
     confianza: resultados.every((resultado) => resultado.confianza === 'alta') ? 'alta' : 'baja',
   }
