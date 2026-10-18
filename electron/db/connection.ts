@@ -22,15 +22,21 @@ function ejecutarMigraciones(db: Database.Database): void {
   const columnasSello = db.prepare('PRAGMA table_info(configuracion_sello)').all() as Array<{ name: string }>
   const nombresColumnasSello = new Set(columnasSello.map((columna) => columna.name))
 
-  if (!nombresColumnasSello.has('nombre_directora')) {
-    db.exec("ALTER TABLE configuracion_sello ADD COLUMN nombre_directora TEXT NOT NULL DEFAULT ''")
-    // Instalaciones muy viejas guardaban el nombre en "nombre_firmante".
+  if (!nombresColumnasSello.has('persona_firmante')) {
+    db.exec("ALTER TABLE configuracion_sello ADD COLUMN persona_firmante TEXT NOT NULL DEFAULT ''")
+    // Versiones previas guardaban el nombre en "nombre_directora" y, en
+    // instalaciones muy viejas, en "nombre_firmante". Las columnas viejas se
+    // dejan en su lugar (SQLite no las necesita fuera) pero ya no se usan.
+    if (nombresColumnasSello.has('nombre_directora')) {
+      db.exec("UPDATE configuracion_sello SET persona_firmante = nombre_directora WHERE persona_firmante = '' AND nombre_directora <> ''")
+    }
     if (nombresColumnasSello.has('nombre_firmante')) {
-      db.exec("UPDATE configuracion_sello SET nombre_directora = nombre_firmante WHERE nombre_directora = '' AND nombre_firmante <> ''")
+      db.exec("UPDATE configuracion_sello SET persona_firmante = nombre_firmante WHERE persona_firmante = '' AND nombre_firmante <> ''")
     }
   }
-  if (!nombresColumnasSello.has('nombre_rectora')) {
-    db.exec("ALTER TABLE configuracion_sello ADD COLUMN nombre_rectora TEXT NOT NULL DEFAULT ''")
+  if (!nombresColumnasSello.has('cargo_firmante')) {
+    // Antes el cargo estaba fijo en el código ("Directora"): ese es el valor inicial.
+    db.exec("ALTER TABLE configuracion_sello ADD COLUMN cargo_firmante TEXT NOT NULL DEFAULT 'Directora'")
   }
   if (!nombresColumnasSello.has('ruta_sello_con_firma')) {
     db.exec('ALTER TABLE configuracion_sello ADD COLUMN ruta_sello_con_firma TEXT')
@@ -45,6 +51,53 @@ function ejecutarMigraciones(db: Database.Database): void {
     if (nombresColumnasSello.has('ruta_imagen_sello')) {
       db.exec('UPDATE configuracion_sello SET ruta_sello_sin_firma = ruta_imagen_sello WHERE ruta_sello_sin_firma IS NULL')
     }
+  }
+  if (!nombresColumnasSello.has('sello_activo_id')) {
+    db.exec('ALTER TABLE configuracion_sello ADD COLUMN sello_activo_id INTEGER')
+  }
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS sello_catalogo (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      nombre TEXT NOT NULL,
+      ruta_imagen TEXT UNIQUE NOT NULL,
+      incluye_firma INTEGER NOT NULL CHECK (incluye_firma IN (0, 1)),
+      fecha_actualizacion TEXT NOT NULL
+    )
+  `)
+  db.exec(`
+    INSERT OR IGNORE INTO sello_catalogo (nombre, ruta_imagen, incluye_firma, fecha_actualizacion)
+    SELECT 'Sello con firma', ruta_sello_con_firma, 1, strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+    FROM configuracion_sello
+    WHERE ruta_sello_con_firma IS NOT NULL
+  `)
+  db.exec(`
+    INSERT OR IGNORE INTO sello_catalogo (nombre, ruta_imagen, incluye_firma, fecha_actualizacion)
+    SELECT 'Sello en blanco', ruta_sello_sin_firma, 0, strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+    FROM configuracion_sello
+    WHERE ruta_sello_sin_firma IS NOT NULL
+  `)
+  db.exec(`
+    UPDATE configuracion_sello
+    SET sello_activo_id = (
+      SELECT id FROM sello_catalogo
+      WHERE ruta_imagen = COALESCE(ruta_sello_con_firma, ruta_sello_sin_firma)
+      LIMIT 1
+    )
+    WHERE sello_activo_id IS NULL
+      AND COALESCE(ruta_sello_con_firma, ruta_sello_sin_firma) IS NOT NULL
+  `)
+
+  const columnasEvento = db.prepare('PRAGMA table_info(evento)').all() as Array<{ name: string }>
+  if (!columnasEvento.some((columna) => columna.name === 'articulo_evento')) {
+    // Artículo ("del", "de la"…) con el que se redactó el nombre del evento. Los
+    // eventos anteriores quedan en NULL: su texto ya se generó y no cambia.
+    db.exec('ALTER TABLE evento ADD COLUMN articulo_evento TEXT')
+  }
+  if (!columnasEvento.some((columna) => columna.name === 'forma_articulo_evento')) {
+    db.exec(`
+      ALTER TABLE evento ADD COLUMN forma_articulo_evento TEXT
+      CHECK (forma_articulo_evento IS NULL OR forma_articulo_evento IN ('en el', 'en la'))
+    `)
   }
 
   const columnasConstancia = db.prepare('PRAGMA table_info(constancia)').all() as Array<{

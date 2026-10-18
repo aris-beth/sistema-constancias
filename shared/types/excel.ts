@@ -17,6 +17,12 @@ export interface FilaExcelCruda {
   modalidad: string
   textoPersonalizado: string | null
   categoria: string | null
+  /**
+   * Artículo elegido para el nombre del evento ("del", "de la"…). Es un dato
+   * del lote, no del Excel: si viene vacío el sistema lo propone a partir del
+   * nombre (ver `inferirArticuloEvento`).
+   */
+  articuloEvento?: import('./evento').ArticuloEvento | null
 }
 
 export interface FilaExcelCrudaGraduacion {

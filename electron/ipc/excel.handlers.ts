@@ -13,6 +13,7 @@ import {
   generarTextoConstancia,
   ROLES_RECONOCIDOS,
 } from '../business/reglasRedaccion/generarTextoConstancia'
+import { inferirArticuloEvento } from '../business/reglasRedaccion/articuloEvento'
 import type { FilaExcelCruda } from '../../shared/types/excel'
 import type { FilaProcesada, ResultadoCargaExcel } from '../../shared/types/ipc'
 
@@ -38,6 +39,8 @@ function procesarFila(
     modalidad: filaCruda.modalidad,
     textoPersonalizado: filaCruda.textoPersonalizado,
     categoria: filaCruda.categoria,
+    // El artículo elegido en pantalla manda; si no hay, se propone por el nombre.
+    articuloEvento: filaCruda.articuloEvento ?? inferirArticuloEvento(filaCruda.nombreEvento),
     textoGenerado: null,
     esPersonalizado: false,
     universidadExterna: null,
@@ -53,6 +56,7 @@ function procesarFila(
     const texto = generarTextoConstancia({
       participaComo: filaCruda.participaComo,
       nombreEvento: filaCruda.nombreEvento,
+      articuloEvento: base.articuloEvento,
       modalidad: filaCruda.modalidad as Parameters<typeof generarTextoConstancia>[0]['modalidad'],
       nombrePonencia: filaCruda.nombrePonencia,
       textoPersonalizado: filaCruda.textoPersonalizado,

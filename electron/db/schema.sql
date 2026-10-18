@@ -19,7 +19,9 @@ CREATE TABLE IF NOT EXISTS evento (
   modalidad TEXT NOT NULL CHECK (modalidad IN ('Presencial CU', 'Presencial CU2', 'En línea', 'Otro')),
   tipo_plantilla TEXT NOT NULL CHECK (tipo_plantilla IN ('regular', 'graduacion')),
   generacion TEXT,
-  carrera TEXT
+  carrera TEXT,
+  articulo_evento TEXT CHECK (articulo_evento IS NULL OR articulo_evento IN ('del', 'de la', 'de los', 'de las')),
+  forma_articulo_evento TEXT CHECK (forma_articulo_evento IS NULL OR forma_articulo_evento IN ('en el', 'en la'))
 );
 
 CREATE TABLE IF NOT EXISTS participante (
@@ -92,14 +94,34 @@ CREATE TABLE IF NOT EXISTS subtipo_graduacion (
 -- 6.4 de requerimientos). Tabla "singleton": el CHECK(id = 1) garantiza que
 -- solo exista una fila, porque hay una sola configuración vigente a la vez
 -- (no una por evento).
--- electron/db/schema.sql
+-- `persona_firmante` / `cargo_firmante`: datos que se imprimen como texto
+-- SOLO cuando se usa el sello en blanco; el sello con firma ya los trae
+-- horneados en la imagen.
 CREATE TABLE IF NOT EXISTS configuracion_sello (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    nombre_directora TEXT NOT NULL,
-    nombre_rectora TEXT NOT NULL,
-    ruta_firma TEXT NOT NULL,
-    ruta_imagen_sello TEXT,
-    fecha_actualizacion DATETIME DEFAULT CURRENT_TIMESTAMP
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  persona_firmante TEXT NOT NULL DEFAULT '',
+  cargo_firmante TEXT NOT NULL DEFAULT 'Directora',
+  ruta_sello_con_firma TEXT,
+  ruta_sello_sin_firma TEXT,
+  sello_activo_id INTEGER,
+  fecha_actualizacion TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS sello_catalogo (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  nombre TEXT NOT NULL,
+  ruta_imagen TEXT UNIQUE NOT NULL,
+  incluye_firma INTEGER NOT NULL CHECK (incluye_firma IN (0, 1)),
+  fecha_actualizacion TEXT NOT NULL
+);
+
+-- Reglas de emisión editables. `max_constancias_por_persona`: cuántas
+-- constancias puede recibir una persona en un evento; la siguiente ya se
+-- emite como RECONOCIMIENTO (6 => la 7ª es reconocimiento). Singleton.
+CREATE TABLE IF NOT EXISTS configuracion_reglas (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  max_constancias_por_persona INTEGER NOT NULL DEFAULT 6 CHECK (max_constancias_por_persona >= 1),
+  fecha_actualizacion TEXT NOT NULL
 );
 
 -- Configuración editable de los dos firmantes de reconocimientos de
@@ -146,8 +168,11 @@ CREATE INDEX IF NOT EXISTS idx_constancia_participante_participante ON constanci
 -- se ejecuta en connection.ts DESPUÉS de `ejecutarMigraciones()`: si
 -- corriera junto con el resto del esquema, fallaría con "no such column"
 -- en una base de datos vieja mientras esa columna no exista todavía.
-INSERT OR IGNORE INTO configuracion_sello (id, nombre_directora, nombre_rectora, ruta_sello_con_firma, ruta_sello_sin_firma, fecha_actualizacion)
-VALUES (1, '', '', NULL, NULL, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
+INSERT OR IGNORE INTO configuracion_sello (id, persona_firmante, cargo_firmante, ruta_sello_con_firma, ruta_sello_sin_firma, fecha_actualizacion)
+VALUES (1, '', 'Directora', NULL, NULL, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
+
+INSERT OR IGNORE INTO configuracion_reglas (id, max_constancias_por_persona, fecha_actualizacion)
+VALUES (1, 6, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
 
 INSERT OR IGNORE INTO configuracion_firmantes_graduacion (id, rector_nombre, rector_cargo, director_nombre, director_cargo, fecha_actualizacion)
 VALUES (1, '', 'Rectora', '', 'Directora', strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));

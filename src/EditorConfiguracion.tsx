@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react'
 import { Badge, Button, Card, Field } from './components/UI'
 import type {
   ConfiguracionFirmantesGraduacion,
+  ConfiguracionReglas,
   ConfiguracionSello,
   FolioCatalogoEntry,
+  OpcionSello,
 } from '../shared/types/configuracion'
 
 interface Props {
@@ -35,12 +37,16 @@ function VistaImagen({ ruta, alt }: { ruta: string | null; alt: string }): JSX.E
 export default function EditorConfiguracion({ onVolver, onAbrirFolios }: Props) {
   const [sello, setSello] = useState<ConfiguracionSello | null>(null)
   const [firmantes, setFirmantes] = useState<ConfiguracionFirmantesGraduacion | null>(null)
+  const [reglas, setReglas] = useState<ConfiguracionReglas | null>(null)
+  // Texto crudo del campo numérico: permite borrarlo y reescribirlo sin que el valor salte.
+  const [maxConstanciasTexto, setMaxConstanciasTexto] = useState('')
   const [folios, setFolios] = useState<FolioCatalogoEntry[]>([])
   const [folioNuevo, setFolioNuevo] = useState('')
   const [referenciaNueva, setReferenciaNueva] = useState('')
   const [cargando, setCargando] = useState(true)
   const [guardando, setGuardando] = useState(false)
   const [registrandoFolio, setRegistrandoFolio] = useState(false)
+  const [procesandoSello, setProcesandoSello] = useState(false)
   const [mensaje, setMensaje] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -53,6 +59,8 @@ export default function EditorConfiguracion({ onVolver, onAbrirFolios }: Props) 
       const inicial = await window.electronAPI.obtenerConfiguracion()
       setSello(inicial.sello)
       setFirmantes(inicial.firmantesGraduacion)
+      setReglas(inicial.reglas)
+      setMaxConstanciasTexto(String(inicial.reglas.maxConstanciasPorPersona))
       setFolios(inicial.folios)
     } catch (errorActual) {
       setError(errorActual instanceof Error ? errorActual.message : String(errorActual))
@@ -61,33 +69,66 @@ export default function EditorConfiguracion({ onVolver, onAbrirFolios }: Props) 
     }
   }
 
-  async function seleccionarImagen(tipo: 'con-firma' | 'sin-firma'): Promise<void> {
+  async function agregarSello(incluyeFirma: boolean): Promise<void> {
     if (!sello) return
+    setProcesandoSello(true)
+    setError(null)
     try {
-      const ruta = tipo === 'con-firma'
-        ? await window.electronAPI.seleccionarSelloConFirma()
-        : await window.electronAPI.seleccionarSelloSinFirma()
-      if (!ruta) return
-      setSello((actual) => actual && (tipo === 'con-firma'
-        ? { ...actual, rutaSelloConFirma: ruta }
-        : { ...actual, rutaSelloSinFirma: ruta }))
+      const nuevo = await window.electronAPI.agregarSello({ incluyeFirma })
+      if (!nuevo) return
+      setSello((actual) => actual && {
+        ...actual,
+        sellos: [...actual.sellos, nuevo],
+        selloActivoId: actual.selloActivoId ?? nuevo.id,
+      })
+      setMensaje(`Sello "${nuevo.nombre}" agregado al catálogo. Guarda los cambios para aplicarlo.`)
     } catch (errorActual) {
       setError(errorActual instanceof Error ? errorActual.message : String(errorActual))
+    } finally {
+      setProcesandoSello(false)
+    }
+  }
+
+  async function reemplazarSello(opcion: OpcionSello): Promise<void> {
+    setProcesandoSello(true)
+    setError(null)
+    try {
+      const actualizado = await window.electronAPI.reemplazarSello(opcion.id)
+      if (!actualizado) return
+      setSello((actual) => actual && {
+        ...actual,
+        sellos: actual.sellos.map((selloGuardado) =>
+          selloGuardado.id === actualizado.id ? actualizado : selloGuardado,
+        ),
+      })
+      setMensaje(`La imagen de "${actualizado.nombre}" fue reemplazada. Si es el sello activo, se usará en las próximas generaciones.`)
+    } catch (errorActual) {
+      setError(errorActual instanceof Error ? errorActual.message : String(errorActual))
+    } finally {
+      setProcesandoSello(false)
     }
   }
 
   async function guardarCambios(): Promise<void> {
     if (!sello || !firmantes) return
+    const maxConstancias = Number(maxConstanciasTexto)
+    if (!Number.isInteger(maxConstancias) || maxConstancias < 1) {
+      setMensaje(null)
+      setError('El máximo de constancias por persona debe ser un número entero de 1 en adelante.')
+      return
+    }
     setGuardando(true)
     setError(null)
     setMensaje(null)
     try {
-      const [selloGuardado, firmantesGuardados] = await Promise.all([
+      const selloActivo = sello.sellos.find((opcion) => opcion.id === sello.selloActivoId)
+      const [selloGuardado, firmantesGuardados, reglasGuardadas] = await Promise.all([
         window.electronAPI.actualizarConfiguracionSello({
-          nombreDirectora: sello.nombreDirectora,
-          nombreRectora: sello.nombreRectora,
-          rutaSelloConFirma: sello.rutaSelloConFirma,
-          rutaSelloSinFirma: sello.rutaSelloSinFirma,
+          personaFirmante: sello.personaFirmante,
+          cargoFirmante: sello.cargoFirmante,
+          rutaSelloConFirma: selloActivo?.incluyeFirma ? selloActivo.rutaImagen : null,
+          rutaSelloSinFirma: selloActivo && !selloActivo.incluyeFirma ? selloActivo.rutaImagen : null,
+          selloActivoId: selloActivo?.id ?? null,
         }),
         window.electronAPI.actualizarFirmantesGraduacion({
           rectorNombre: firmantes.rectorNombre,
@@ -95,9 +136,12 @@ export default function EditorConfiguracion({ onVolver, onAbrirFolios }: Props) 
           directorNombre: firmantes.directorNombre,
           directorCargo: firmantes.directorCargo,
         }),
+        window.electronAPI.actualizarConfiguracionReglas({ maxConstanciasPorPersona: maxConstancias }),
       ])
       setSello(selloGuardado)
       setFirmantes(firmantesGuardados)
+      setReglas(reglasGuardadas)
+      setMaxConstanciasTexto(String(reglasGuardadas.maxConstanciasPorPersona))
       setMensaje('Cambios administrativos guardados.')
     } catch (errorActual) {
       setError(errorActual instanceof Error ? errorActual.message : String(errorActual))
@@ -131,7 +175,7 @@ export default function EditorConfiguracion({ onVolver, onAbrirFolios }: Props) 
   }
 
   if (cargando) return <p>Cargando configuración administrativa...</p>
-  if (!sello || !firmantes) return <p>No se pudo cargar la configuración administrativa.</p>
+  if (!sello || !firmantes || !reglas) return <p>No se pudo cargar la configuración administrativa.</p>
 
   return (
     <div className="editor-page">
@@ -145,19 +189,48 @@ export default function EditorConfiguracion({ onVolver, onAbrirFolios }: Props) 
       <div className="editor-layout">
         <main className="editor-main">
           <Card>
-            <div className="section-heading"><div><h3>Firma y sello</h3><p>Elementos que aparecerán en las constancias regulares.</p></div><Badge tone="neutral">Activos para nuevos documentos</Badge></div>
-            <p className="campo-ayuda">
-              El sello "con firma" ya trae la firma y el nombre de la directora horneados en la imagen: se usa tal cual y no se repite el nombre por separado.
-              Mientras no lo cargues, se usa el sello "en blanco" y el nombre de abajo se imprime como texto.
-            </p>
-            <div className="image-grid">
-              <div className="image-control"><strong>Sello con firma de la directora</strong><VistaImagen ruta={sello.rutaSelloConFirma} alt="Vista previa del sello con firma" /><Button variant="secondary" type="button" onClick={() => void seleccionarImagen('con-firma')}>Subir sello con firma</Button></div>
-              <div className="image-control"><strong>Sello en blanco (sin firma)</strong><VistaImagen ruta={sello.rutaSelloSinFirma} alt="Vista previa del sello en blanco" /><Button variant="secondary" type="button" onClick={() => void seleccionarImagen('sin-firma')}>Subir sello en blanco</Button></div>
+            <div className="section-heading"><div><h3>Firma y sello</h3><p>Selecciona cuál se usará en las constancias regulares. El cambio aplica a las siguientes generaciones.</p></div></div>
+            <div className="preview-actions">
+              <Button variant="secondary" type="button" disabled={procesandoSello} onClick={() => void agregarSello(true)}>Agregar sello con firma</Button>
+              <Button variant="secondary" type="button" disabled={procesandoSello} onClick={() => void agregarSello(false)}>Agregar sello en blanco</Button>
             </div>
+            {sello.sellos.length > 0 ? (
+              <div className="image-grid">
+                {sello.sellos.map((opcion) => (
+                  <div className="image-control" key={opcion.id}>
+                    <label className="campo-ayuda">
+                      <input
+                        type="radio"
+                        name="selloActivo"
+                        checked={sello.selloActivoId === opcion.id}
+                        onChange={() => setSello({ ...sello, selloActivoId: opcion.id })}
+                      />
+                      {sello.selloActivoId === opcion.id ? 'Sello activo' : 'Usar este sello'}
+                    </label>
+                    <strong>{opcion.nombre}</strong>
+                    <VistaImagen ruta={opcion.rutaImagen} alt={`Vista previa de ${opcion.nombre}`} />
+                    <span className="campo-ayuda">{opcion.incluyeFirma ? 'Incluye firma en la imagen' : 'Sin firma; se imprimirá el nombre configurado'}</span>
+                    <div className="preview-actions">
+                      <Button variant="text" type="button" disabled={procesandoSello} onClick={() => void reemplazarSello(opcion)}>Reemplazar imagen</Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="campo-ayuda">Aún no hay sellos cargados. Puedes agregar uno o continuar solo con el nombre y cargo de la persona firmante.</p>
+            )}
             <div className="form-grid">
-              <Field label="Nombre de directora de facultad"><input value={sello.nombreDirectora} onChange={(evento) => setSello({ ...sello, nombreDirectora: evento.target.value })} /></Field>
-              <Field label="Nombre de rectora"><input value={sello.nombreRectora} onChange={(evento) => setSello({ ...sello, nombreRectora: evento.target.value })} /></Field>
+              <Field label="Persona firmante"><input value={sello.personaFirmante} onChange={(evento) => setSello({ ...sello, personaFirmante: evento.target.value })} /></Field>
+              <Field label="Cargo"><input value={sello.cargoFirmante} onChange={(evento) => setSello({ ...sello, cargoFirmante: evento.target.value })} /></Field>
             </div>
+          </Card>
+
+          <Card>
+            <div className="section-heading"><div><h3>Reglas de emisión</h3><p>Cuándo una constancia pasa a ser reconocimiento.</p></div></div>
+            <div className="form-grid">
+              <Field label="Máximo de constancias por persona en un evento"><input type="number" min={1} step={1} inputMode="numeric" value={maxConstanciasTexto} onChange={(evento) => setMaxConstanciasTexto(evento.target.value)} /></Field>
+            </div>
+            <p className="campo-ayuda">La constancia siguiente a este máximo se emite como RECONOCIMIENTO. Con {Number.isInteger(Number(maxConstanciasTexto)) && Number(maxConstanciasTexto) >= 1 ? maxConstanciasTexto : '…'} constancias, la número {Number.isInteger(Number(maxConstanciasTexto)) && Number(maxConstanciasTexto) >= 1 ? Number(maxConstanciasTexto) + 1 : '…'} ya es reconocimiento. Aplica a los lotes que se guarden a partir de ahora.</p>
           </Card>
 
           <Card>

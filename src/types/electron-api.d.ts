@@ -14,8 +14,11 @@ import type {
   ResultadoCargaGraduacion,
   ConfiguracionInicial,
   ConfiguracionSelloEntrada,
+  SelloCatalogoEntrada,
+  ConfiguracionReglasEntrada,
   ConfiguracionFirmantesGraduacionEntrada,
   ActualizarFolioEntrada,
+  EliminarFolioEntrada,
   RegistrarFolioEntrada,
   EstadisticasEntrada,
   EstadisticasResultado,
@@ -24,8 +27,10 @@ import type {
 import type { Evento } from '../../shared/types/evento'
 import type {
   ConfiguracionSello,
+  ConfiguracionReglas,
   ConfiguracionFirmantesGraduacion,
   FolioCatalogoEntry,
+  OpcionSello,
 } from '../../shared/types/configuracion'
 
 declare global {
@@ -44,14 +49,15 @@ declare global {
       seleccionarCarpetaDestino: () => Promise<string | null>
       previsualizarDocumento: (entrada: PrevisualizarEntrada) => Promise<string>
       obtenerConfiguracion: () => Promise<ConfiguracionInicial>
-      seleccionarSelloConFirma: () => Promise<string | null>
-      seleccionarSelloSinFirma: () => Promise<string | null>
+      agregarSello: (entrada: SelloCatalogoEntrada) => Promise<OpcionSello | null>
+      reemplazarSello: (id: number) => Promise<OpcionSello | null>
       actualizarConfiguracionSello: (entrada: ConfiguracionSelloEntrada) => Promise<ConfiguracionSello>
       actualizarFirmantesGraduacion: (entrada: ConfiguracionFirmantesGraduacionEntrada) => Promise<ConfiguracionFirmantesGraduacion>
+      actualizarConfiguracionReglas: (entrada: ConfiguracionReglasEntrada) => Promise<ConfiguracionReglas>
       listarFolios: () => Promise<FolioCatalogoEntry[]>
       registrarFolio: (entrada: RegistrarFolioEntrada) => Promise<FolioCatalogoEntry>
       actualizarFolio: (entrada: ActualizarFolioEntrada) => Promise<FolioCatalogoEntry>
-      eliminarFolio: (id: number) => Promise<void>
+      eliminarFolio: (entrada: EliminarFolioEntrada) => Promise<void>
       consultarEstadisticas: (entrada: EstadisticasEntrada) => Promise<EstadisticasResultado>
     }
   }

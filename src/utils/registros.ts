@@ -37,6 +37,7 @@ export function registroAFila(registro: RegistroExcel, errores: ErrorValidacion[
     modalidad: registro.modalidad ?? '',
     textoPersonalizado: textoOpcional(registro.textoPersonalizado),
     categoria: textoOpcional(registro.categoria),
+    articuloEvento: registro.articuloEvento ?? null,
   }
 }
 
@@ -62,7 +63,7 @@ export function registroAFilaGraduacion(
 export function registroAFilaCruda(registro: RegistroExcel): FilaExcelCruda {
   return {
     numeroFila: Number(registro.idFila),
-    nombreCompleto: registro.nombre ?? '',
+    nombreCompleto: registro.nombreOriginal ?? registro.nombre ?? '',
     participaComo: registro.rol ?? '',
     nombrePonencia: textoOpcional(registro.nombrePonencia),
     nombreEvento: registro.nombreEvento ?? '',
@@ -71,13 +72,14 @@ export function registroAFilaCruda(registro: RegistroExcel): FilaExcelCruda {
     modalidad: registro.modalidad ?? '',
     textoPersonalizado: textoOpcional(registro.textoPersonalizado),
     categoria: textoOpcional(registro.categoria),
+    articuloEvento: registro.articuloEvento ?? null,
   }
 }
 
 export function registroAFilaCrudaGraduacion(registro: RegistroExcel): FilaExcelCrudaGraduacion {
   return {
     numeroFila: Number(registro.idFila),
-    nombreCompleto: registro.nombre ?? '',
+    nombreCompleto: registro.nombreOriginal ?? registro.nombre ?? '',
     subtipo: registro.rol ?? '',
     generacion: registro.generacion ?? '',
     carrera: registro.carrera ?? '',

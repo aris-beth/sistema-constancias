@@ -1,5 +1,10 @@
 import { obtenerBaseDeDatos } from '../connection'
 import type { Evento, EventoNuevo, TipoPlantilla } from '../../../shared/types/evento'
+import {
+  articuloEventoPersistido,
+  esArticuloEvento,
+  esFormaEnEvento,
+} from '../../business/reglasRedaccion/articuloEvento'
 
 // Forma "cruda" de la fila tal como la devuelve SQLite (nombres de
 // columna en snake_case, igual que en schema.ts).
@@ -12,6 +17,8 @@ interface FilaEvento {
   tipo_plantilla: string
   generacion: string | null
   carrera: string | null
+  articulo_evento: string | null
+  forma_articulo_evento?: string | null
 }
 
 // Traduce la fila cruda de la base de datos al tipo Evento (camelCase)
@@ -27,16 +34,28 @@ function mapearFila(fila: FilaEvento): Evento {
     tipoPlantilla: fila.tipo_plantilla as Evento['tipoPlantilla'],
     generacion: fila.generacion,
     carrera: fila.carrera,
+    articuloEvento: esFormaEnEvento(fila.forma_articulo_evento)
+      ? fila.forma_articulo_evento
+      : esArticuloEvento(fila.articulo_evento)
+        ? fila.articulo_evento
+        : null,
   }
 }
 
 export function crearEvento(datos: EventoNuevo): Evento {
   const db = obtenerBaseDeDatos()
+  const articuloPersistido = articuloEventoPersistido(datos.articuloEvento)
 
   try {
     const insertar = db.prepare(`
-      INSERT INTO evento (folio, nombre_evento, fecha_constancia, modalidad, tipo_plantilla, generacion, carrera)
-      VALUES (@folio, @nombreEvento, @fechaConstancia, @modalidad, @tipoPlantilla, @generacion, @carrera)
+      INSERT INTO evento (
+        folio, nombre_evento, fecha_constancia, modalidad, tipo_plantilla, generacion,
+        carrera, articulo_evento, forma_articulo_evento
+      )
+      VALUES (
+        @folio, @nombreEvento, @fechaConstancia, @modalidad, @tipoPlantilla, @generacion,
+        @carrera, @articuloEvento, @formaArticuloEvento
+      )
     `)
 
     const resultado = insertar.run({
@@ -47,6 +66,7 @@ export function crearEvento(datos: EventoNuevo): Evento {
       tipoPlantilla: datos.tipoPlantilla,
       generacion: datos.generacion,
       carrera: datos.carrera,
+      ...articuloPersistido,
     })
 
     const eventoCreado = obtenerEventoPorId(Number(resultado.lastInsertRowid))

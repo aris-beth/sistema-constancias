@@ -13,7 +13,7 @@ const datosBase = {
 describe('generarTextoConstancia', () => {
   it('conserva la sede normal para participantes BUAP', () => {
     expect(generarTextoConstancia(datosBase).textoGenerado).toBe(
-      'Por participar como Organizador, en el evento Congreso 2026, en la Facultad de Ciencias de la Computación.',
+      'Por haber participado como Organizador, del Congreso 2026, en la Facultad de Ciencias de la Computación.',
     )
   })
 
@@ -27,7 +27,7 @@ describe('generarTextoConstancia', () => {
         }),
       ).toEqual({
         textoGenerado:
-          'Por participar como Organizador, en el evento Congreso 2026, en la Facultad de Ciencias de la Computación.',
+            'Por haber participado como Organizador, del Congreso 2026, en la Facultad de Ciencias de la Computación.',
         esPersonalizado: false,
         universidadExterna: null,
       })
@@ -35,7 +35,7 @@ describe('generarTextoConstancia', () => {
   )
 
   it.each(['Presencial CU', 'Presencial CU2', 'En línea', 'Otro'] as const)(
-    'elimina la sede para una universidad externa con modalidad %s',
+    'conserva la sede para una universidad externa con modalidad %s',
     (modalidad) => {
     const resultado = generarTextoConstancia({
       ...datosBase,
@@ -43,8 +43,9 @@ describe('generarTextoConstancia', () => {
       modalidad,
     })
 
-    expect(resultado.textoGenerado.endsWith('en el evento Congreso 2026.')).toBe(true)
-    expect(resultado.textoGenerado).not.toContain('Facultad de Ciencias de la Computación')
+    expect(resultado.textoGenerado.endsWith('en la Facultad de Ciencias de la Computación.') ||
+      resultado.textoGenerado.endsWith('de la Facultad de Ciencias de la Computación.') ||
+      resultado.textoGenerado.endsWith('en la Facultad de Ciencias de la Computación, campus CU2.')).toBe(true)
     },
   )
 
@@ -70,7 +71,69 @@ describe('generarTextoConstancia', () => {
     expect(resultado.textoGenerado).not.toContain('Jurado calificador')
   })
 
-  it('usa GANADOR como descripción libre de lo obtenido', () => {
+  describe('artículo del evento ("del" / "de la")', () => {
+    it('conserva del/de la para organizadores y colaboradores', () => {
+      expect(
+        generarTextoConstancia({
+          ...datosBase,
+          participaComo: 'Colaborador',
+          nombreEvento: '5.º Taller de Experiencias',
+          articuloEvento: 'de la',
+        }).textoGenerado,
+      ).toContain('en la organización de la 5.º Taller de Experiencias,')
+      expect(
+        generarTextoConstancia({
+          ...datosBase,
+          participaComo: 'Organizador',
+          nombreEvento: '3.ª Jornada de Computación',
+          articuloEvento: 'de la',
+        }).textoGenerado,
+      ).toContain(', de la 3.ª Jornada de Computación,')
+      expect(
+        generarTextoConstancia({
+          ...datosBase,
+          participaComo: 'Colaborador',
+          nombreEvento: '5.º Taller de Experiencias',
+        }).textoGenerado,
+      ).toContain('en la organización del 5.º Taller de Experiencias,')
+    })
+
+    it('usa en el/en la para las demás plantillas, usando la forma elegida o inferida', () => {
+      expect(
+        generarTextoConstancia({
+          ...datosBase,
+          participaComo: 'Asistente',
+          nombreEvento: '5.º Taller de Experiencias',
+        }).textoGenerado,
+      ).toContain('Por asistir en el 5.º Taller de Experiencias,')
+      expect(
+        generarTextoConstancia({
+          ...datosBase,
+          participaComo: 'Asistente',
+          nombreEvento: '5.º Taller de Experiencias',
+          articuloEvento: 'en la',
+        }).textoGenerado,
+      ).toContain('Por asistir en la 5.º Taller de Experiencias,')
+    })
+
+    it('si no puede decidir y la plantilla lo necesita, pide elegirlo', () => {
+      expect(() =>
+        generarTextoConstancia({ ...datosBase, nombreEvento: 'La Noche de los Investigadores' }),
+      ).toThrow(/elige una forma/i)
+    })
+
+    it('los roles que nombran el evento piden elegir una forma si no se puede inferir', () => {
+      expect(() =>
+        generarTextoConstancia({
+          ...datosBase,
+          participaComo: 'Asistente',
+          nombreEvento: 'La Noche de los Investigadores',
+        }),
+      ).toThrow(/elige una forma/i)
+    })
+  })
+
+  it('usa GANADOR como descripción libre y omite "en el evento"', () => {
     expect(
       generarTextoConstancia({
         ...datosBase,
@@ -78,7 +141,37 @@ describe('generarTextoConstancia', () => {
         nombrePonencia: 'mejor proyecto integrador',
       }).textoGenerado,
     ).toBe(
-      'Por ser mejor proyecto integrador en el evento Congreso 2026, en la Facultad de Ciencias de la Computación.',
+      'Por ser mejor proyecto integrador en el Congreso 2026, en la Facultad de Ciencias de la Computación.',
     )
+  })
+
+  it.each([
+    'Asistente',
+    'Ponente conferencia',
+    'Ponente',
+    'Jurado',
+    'Moderador de panel',
+    'Ganador',
+    'Comité revisor',
+  ])('usa «en el Congreso» sin decir «en el evento» para %s', (participaComo) => {
+    const texto = generarTextoConstancia({
+      ...datosBase,
+      participaComo,
+      nombrePonencia: 'tema de prueba',
+    }).textoGenerado
+
+    expect(texto).toContain('en el Congreso 2026')
+    expect(texto).not.toContain('en el evento')
+  })
+
+  it('conserva «emanado del Congreso» en la construcción gramatical de revisor de libro', () => {
+    const texto = generarTextoConstancia({
+      ...datosBase,
+      participaComo: 'Revisor de libro',
+      nombrePonencia: 'una reseña',
+    }).textoGenerado
+
+    expect(texto).toContain('emanado del Congreso 2026')
+    expect(texto).not.toContain('en el evento')
   })
 })

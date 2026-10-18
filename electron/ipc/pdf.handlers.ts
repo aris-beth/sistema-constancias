@@ -2,6 +2,7 @@ import { dialog, ipcMain } from 'electron'
 import { obtenerBaseDeDatos } from '../db/connection'
 import { obtenerEventoPorFolio } from '../db/repositories/evento.repository'
 import { obtenerConfiguracionSello } from '../db/repositories/configuracionSello.repository'
+import { obtenerConfiguracionReglas } from '../db/repositories/configuracionReglas.repository'
 import { obtenerConfiguracionFirmantesGraduacion } from '../db/repositories/configuracionFirmantesGraduacion.repository'
 import { calcularEncabezadosPorFila } from '../business/calcularEncabezados'
 import { carpetaResources, generarPdfsPorRol, type GrupoPdf } from '../pdf/generarPdf'
@@ -79,7 +80,10 @@ async function generarPrevisualizacion(entrada: PrevisualizarEntrada): Promise<s
   const fila = indice >= 0 ? validas[indice] : filas.find((item) => item.numeroFila === entrada.numeroFila)
   if (!fila) throw new Error(`No se encontró la fila ${entrada.numeroFila} para previsualizar.`)
 
-  const encabezados = calcularEncabezadosPorFila(filas)
+  const encabezados = calcularEncabezadosPorFila(
+    filas,
+    obtenerConfiguracionReglas().maxConstanciasPorPersona,
+  )
   const documento: DatosDocumentoPdf = {
     folioInterno: `${folio || 'SIN-FOLIO'}-${rellenar(Math.max(indice, 0) + 1)}`,
     encabezado: encabezados.get(fila.numeroFila) ?? 'CONSTANCIA',
@@ -161,8 +165,11 @@ export function registrarManejadorGenerarPdfs(): void {
 
       const advertencias = [...resultado.advertencias]
       if (!esGraduacion) {
-        if (!sello.nombreDirectora?.trim()) {
-          advertencias.push('La configuración de firma no tiene nombre de directora; revisa el Editor de plantillas.')
+        // La persona firmante solo se imprime como texto cuando NO hay sello
+        // con firma configurado (si hay uno pero no se puede leer, ya viene
+        // una advertencia propia de `generarPdfsPorRol`).
+        if (!sello.rutaSelloConFirma && !sello.personaFirmante?.trim()) {
+          advertencias.push('La configuración de firma no tiene persona firmante; revisa el Editor de plantillas.')
         }
       }
 

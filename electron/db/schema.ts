@@ -10,7 +10,9 @@ CREATE TABLE IF NOT EXISTS evento (
   modalidad TEXT NOT NULL CHECK (modalidad IN ('Presencial CU', 'Presencial CU2', 'En línea', 'Otro')),
   tipo_plantilla TEXT NOT NULL CHECK (tipo_plantilla IN ('regular', 'graduacion')),
   generacion TEXT,
-  carrera TEXT
+  carrera TEXT,
+  articulo_evento TEXT CHECK (articulo_evento IS NULL OR articulo_evento IN ('del', 'de la', 'de los', 'de las')),
+  forma_articulo_evento TEXT CHECK (forma_articulo_evento IS NULL OR forma_articulo_evento IN ('en el', 'en la'))
 );
 
 CREATE TABLE IF NOT EXISTS participante (
@@ -63,10 +65,25 @@ CREATE TABLE IF NOT EXISTS subtipo_graduacion (
 
 CREATE TABLE IF NOT EXISTS configuracion_sello (
   id INTEGER PRIMARY KEY CHECK (id = 1),
-  nombre_directora TEXT NOT NULL DEFAULT '',
-  nombre_rectora TEXT NOT NULL DEFAULT '',
+  persona_firmante TEXT NOT NULL DEFAULT '',
+  cargo_firmante TEXT NOT NULL DEFAULT 'Directora',
   ruta_sello_con_firma TEXT,
   ruta_sello_sin_firma TEXT,
+  sello_activo_id INTEGER,
+  fecha_actualizacion TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS sello_catalogo (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  nombre TEXT NOT NULL,
+  ruta_imagen TEXT UNIQUE NOT NULL,
+  incluye_firma INTEGER NOT NULL CHECK (incluye_firma IN (0, 1)),
+  fecha_actualizacion TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS configuracion_reglas (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  max_constancias_por_persona INTEGER NOT NULL DEFAULT 6 CHECK (max_constancias_por_persona >= 1),
   fecha_actualizacion TEXT NOT NULL
 );
 
@@ -100,8 +117,11 @@ CREATE INDEX IF NOT EXISTS idx_constancia_participante_participante ON constanci
 // obtenerBaseDeDatos() ejecuta SCHEMA_SQL, LUEGO las migraciones, y SOLO
 // DESPUÉS este seed.
 export const SCHEMA_SEED_SQL = `
-INSERT OR IGNORE INTO configuracion_sello (id, nombre_directora, nombre_rectora, ruta_sello_con_firma, ruta_sello_sin_firma, fecha_actualizacion)
-VALUES (1, '', '', NULL, NULL, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
+INSERT OR IGNORE INTO configuracion_sello (id, persona_firmante, cargo_firmante, ruta_sello_con_firma, ruta_sello_sin_firma, fecha_actualizacion)
+VALUES (1, '', 'Directora', NULL, NULL, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
+
+INSERT OR IGNORE INTO configuracion_reglas (id, max_constancias_por_persona, fecha_actualizacion)
+VALUES (1, 6, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
 
 INSERT OR IGNORE INTO configuracion_firmantes_graduacion (id, rector_nombre, rector_cargo, director_nombre, director_cargo, fecha_actualizacion)
 VALUES (1, '', 'Rectora', '', 'Directora', strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));

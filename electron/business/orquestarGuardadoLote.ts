@@ -1,5 +1,9 @@
 import type { Modalidad } from '../../shared/types/evento'
 import type { TipoDocumento } from '../../shared/types/constancia'
+import {
+  MAX_CONSTANCIAS_POR_PERSONA_PREDETERMINADO,
+  numeroMinimoParaReconocimiento,
+} from './reglas/determinarTipoDocumento'
 
 export interface FilaLoteResuelta {
   numeroFila: number
@@ -52,6 +56,7 @@ export interface ResultadoOrquestacionLote {
 export function orquestarGuardadoLote(
   filas: FilaLoteResuelta[],
   folioEvento: string,
+  maxConstanciasPorPersona: number = MAX_CONSTANCIAS_POR_PERSONA_PREDETERMINADO,
 ): ResultadoOrquestacionLote {
   const folio = folioEvento.trim()
   if (!folio) throw new Error('El folio del evento es obligatorio.')
@@ -77,7 +82,10 @@ export function orquestarGuardadoLote(
     const resultados = fila.participantes.map((participante) => {
       const numero = participante.conteoPrevio + 1
       return {
-        tipoDocumento: numero >= 7 ? ('reconocimiento' as const) : ('constancia' as const),
+        tipoDocumento:
+          numero >= numeroMinimoParaReconocimiento(maxConstanciasPorPersona)
+            ? ('reconocimiento' as const)
+            : ('constancia' as const),
         numero,
       }
     })

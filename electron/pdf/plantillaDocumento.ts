@@ -190,6 +190,39 @@ function encabezadoInstitucional(encabezado: string): string {
       </header>`
 }
 
+export interface SelloElegido {
+  /** Imagen (data URI) que se dibuja en el documento; null si no hay ninguna utilizable. */
+  imagen: string | null
+  /**
+   * true cuando la imagen elegida ya trae horneados la firma, el nombre y el
+   * cargo: en ese caso persona firmante y cargo NO se imprimen como texto.
+   */
+  incluyeFirmante: boolean
+}
+
+/**
+ * Regla única para decidir qué sello lleva una constancia regular:
+ *
+ * 1. Si hay un sello CON firma cargado y se pudo leer, se usa ese tal cual.
+ *    Ya incluye la firma, el nombre y el cargo: no se imprime texto aparte.
+ * 2. Si no, se usa el sello EN BLANCO y la persona firmante y el cargo
+ *    configurados se imprimen como texto debajo de él.
+ * 3. Si tampoco hay sello en blanco, no se dibuja imagen y solo se imprime
+ *    el texto de persona firmante y cargo.
+ *
+ * "Cargado" significa que la ruta guardada existe y la imagen se leyó sin
+ * error (ver `armarRecursos`): una ruta rota cae al caso 2 en vez de dejar
+ * el espacio vacío.
+ */
+export function elegirSelloParaDocumento(
+  recursos: Pick<RecursosDocumento, 'selloConFirma' | 'selloSinFirma'>,
+): SelloElegido {
+  if (recursos.selloConFirma) {
+    return { imagen: recursos.selloConFirma, incluyeFirmante: true }
+  }
+  return { imagen: recursos.selloSinFirma ?? null, incluyeFirmante: false }
+}
+
 export function crearPaginaRegular(
   documento: DatosDocumentoPdf,
   sello: ConfiguracionSello,
@@ -202,13 +235,7 @@ export function crearPaginaRegular(
   const tamanoCuerpo = ajustePonencia
     ? Math.min(destinatario.tamanoPt, ajustePonencia.tamanoFuentePt, 12)
     : 12
-  const nombreFirmante = sello.nombreDirectora
-  const cargoFirmante = 'Directora'
-  // El sello "con firma" ya trae horneados la firma, el nombre y el cargo de
-  // la directora (sección 6.4): si está disponible se usa tal cual y NO se
-  // repite el nombre como texto. El texto de respaldo solo aparece mientras
-  // no se haya cargado esa versión (se usa entonces el sello en blanco).
-  const tieneSelloConFirma = Boolean(recursos.selloConFirma)
+  const selloElegido = elegirSelloParaDocumento(recursos)
 
   return `<section class="pagina">
     <div class="col-izq"><div class="logo"></div><div class="folio-bloque"><div class="folio">Folio: ${escaparHtml(documento.folioInterno)}</div></div></div>
@@ -227,7 +254,7 @@ export function crearPaginaRegular(
             <div class="fecha">Puebla de Z., a ${escaparHtml(formatearFechaParaDocumento(documento.fecha))}</div>
           </div>
           <div class="sello-img"></div>
-          ${!tieneSelloConFirma ? `<div class="sello-firmante"><strong>${escaparHtml(nombreFirmante)}</strong><span>${escaparHtml(cargoFirmante)}</span></div>` : ''}
+          ${selloElegido.incluyeFirmante ? '' : `<div class="sello-firmante"><strong>${escaparHtml(sello.personaFirmante ?? '')}</strong><span>${escaparHtml(sello.cargoFirmante ?? '')}</span></div>`}
         </div>
       </main>
     </div>
@@ -342,7 +369,7 @@ export function crearHtmlDocumento(
       .sello-texto .lema { font-size: 12pt; font-weight: 700; line-height: 1.45; }
       .sello-texto .fecha { font-size: 12pt; line-height: 1.45; }
       .sello-img { position: absolute; left: 50%; top: 0; transform: translateX(-50%); width: 8.5cm; height: 5.5cm; background-repeat: no-repeat; background-position: center; background-size: contain; }
-      .sello-firmante { position: absolute; left: 0; top: 1.72in; width: 100%; text-align: center; font-size: 12pt; line-height: 1.3; }
+      .sello-firmante { position: absolute; left: 0; top: 1.62in; width: 100%; text-align: center; font-size: 12pt; line-height: 1.3; }
       .sello-firmante strong { font-weight: 700; display: block; }
 
       /* Pie: graduación (dos firmantes, alineados verticalmente) */
@@ -354,7 +381,7 @@ export function crearHtmlDocumento(
       .graduacion .cuerpo { font-size: 13.5pt; line-height: 1.3; margin-top: 0.065in; }
 
       ${reglaImagen('.logo', recursos.logo)}
-      ${reglaImagen('.sello-img', recursos.selloConFirma ?? recursos.selloSinFirma)}
+      ${reglaImagen('.sello-img', elegirSelloParaDocumento(recursos).imagen)}
       ${estilosPreview}
     </style></head><body>${cuerpo}</body></html>`
 }

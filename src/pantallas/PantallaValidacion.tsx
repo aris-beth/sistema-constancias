@@ -1,6 +1,7 @@
 // src/pantallas/PantallaValidacion.tsx
 import React, { useEffect, useMemo, useState } from 'react';
 import '../styles/design-system.css';
+import { ARTICULOS_EVENTO, type ArticuloEvento } from '../../shared/types/evento';
 
 // Tipos base para la estructura de datos
 export interface RegistroExcel {
@@ -24,6 +25,7 @@ interface PantallaValidacionProps {
   onActualizarRegistro: (idFila: string, campo: string, valor: any) => void;
   modo: 'regular' | 'graduacion';
   onCambiarNombreEvento: (nombre: string) => void;
+  onCambiarArticuloEvento: (articulo: ArticuloEvento | null) => void;
   filasPendientes: string[];
   actualizando: boolean;
   mensajeActualizacion: string | null;
@@ -128,6 +130,7 @@ export const PantallaValidacion: React.FC<PantallaValidacionProps> = ({
   onActualizarRegistro,
   modo,
   onCambiarNombreEvento,
+  onCambiarArticuloEvento,
   filasPendientes,
   actualizando,
   mensajeActualizacion,
@@ -146,6 +149,9 @@ export const PantallaValidacion: React.FC<PantallaValidacionProps> = ({
       ? `Reconocimientos de graduación ${registros[0].generacion}`
       : '';
   const fechaEvento = String(registros[0]?.fechaConstancia ?? '');
+  // El artículo ("del", "de la"…) es un dato del lote, igual que el nombre del evento.
+  const articuloEvento: ArticuloEvento | '' =
+    (registros.find((r) => r.articuloEvento)?.articuloEvento as ArticuloEvento | undefined) ?? '';
 
   // Vista previa del folio automático (no guarda nada).
   useEffect(() => {
@@ -254,6 +260,26 @@ export const PantallaValidacion: React.FC<PantallaValidacionProps> = ({
                 ? 'Se toma de la columna de evento del Excel. Si lo cambias aquí, se aplica a todas las filas.'
                 : 'En graduación el nombre se arma con la generación del Excel.'}
             </span>
+            {modo === 'regular' && (
+              <>
+                <label htmlFor="articulo-evento" style={{ fontWeight: 600 }}>Forma de nombrar el evento:</label>
+                <select
+                  id="articulo-evento"
+                  className="input-institucional"
+                  value={articuloEvento}
+                  onChange={(e) => onCambiarArticuloEvento((e.target.value || null) as ArticuloEvento | null)}
+                >
+                  <option value="">— Elegir —</option>
+                  {ARTICULOS_EVENTO.map((articulo) => (
+                    <option key={articulo} value={articulo}>{articulo}</option>
+                  ))}
+                </select>
+                <span className="evento-ayuda">
+                  Organizador/a, colaborador/a y revisor/a de libro conservan «del/de la»; las demás redacciones usan «en el/en la» (o «en los/en las» en plural). La sede de la Facultad se mantiene también para participantes externos.
+                  {!articuloEvento && ' Si no se propone una forma automáticamente, elige una y pulsa «Actualizar cambios».'}
+                </span>
+              </>
+            )}
             {modo === 'regular' && resumenEventos.distintos.length > 1 && (
               <span className="evento-advertencia">
                 ⚠ El Excel trae {resumenEventos.distintos.length} nombres de evento distintos ({resumenEventos.distintos.join(' / ')}).

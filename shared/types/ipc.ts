@@ -28,6 +28,8 @@ export interface FilaProcesada {
   modalidad: string
   textoPersonalizado: string | null
   categoria: string | null
+  /** Artículo del nombre del evento ya resuelto (elegido o propuesto); null si no se pudo decidir. */
+  articuloEvento?: import('./evento').ArticuloEvento | null
 }
 
 export interface PrevisualizarFolioEntrada {
@@ -99,10 +101,15 @@ export interface PrevisualizarEntrada {
 }
 
 export interface ConfiguracionSelloEntrada {
-  nombreDirectora: string
-  nombreRectora: string
+  personaFirmante: string
+  cargoFirmante: string
   rutaSelloConFirma: string | null
   rutaSelloSinFirma: string | null
+  selloActivoId: number | null
+}
+
+export interface SelloCatalogoEntrada {
+  incluyeFirma: boolean
 }
 
 export interface ConfiguracionFirmantesGraduacionEntrada {
@@ -119,12 +126,24 @@ export interface RegistrarFolioEntrada {
 
 export interface ActualizarFolioEntrada extends RegistrarFolioEntrada {
   id: number
+  /** Tabla de la que viene el folio; si falta se asume 'catalogo'. */
+  origen?: import('./configuracion').OrigenFolio
+}
+
+export interface EliminarFolioEntrada {
+  id: number
+  origen: import('./configuracion').OrigenFolio
+}
+
+export interface ConfiguracionReglasEntrada {
+  maxConstanciasPorPersona: number
 }
 
 export interface ConfiguracionInicial {
   sello: import('./configuracion').ConfiguracionSello
   firmantesGraduacion: import('./configuracion').ConfiguracionFirmantesGraduacion
   folios: import('./configuracion').FolioCatalogoEntry[]
+  reglas: import('./configuracion').ConfiguracionReglas
 }
 
 export interface FiltrosEstadisticas {

@@ -19,6 +19,14 @@ function normalizarBusqueda(valor: string): string {
     .trim()
 }
 
+function claveEntrada(entrada: FolioCatalogoEntry): string {
+  return `${entrada.origen}-${entrada.id}`
+}
+
+function etiquetaOrigen(entrada: FolioCatalogoEntry): string {
+  return entrada.origen === 'evento' ? 'Evento guardado' : 'Capturado a mano'
+}
+
 function fechaLegible(valor: string): string {
   const fecha = new Date(valor)
   if (Number.isNaN(fecha.getTime())) return valor
@@ -36,7 +44,7 @@ export default function CatalogoFolios({ onVolver }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [mensaje, setMensaje] = useState<string | null>(null)
   const [busqueda, setBusqueda] = useState('')
-  const [editandoId, setEditandoId] = useState<number | null>(null)
+  const [editandoClave, setEditandoClave] = useState<string | null>(null)
   const [borrador, setBorrador] = useState<Borrador>({ folio: '', nombreReferencia: '' })
   const [nuevo, setNuevo] = useState<Borrador>({ folio: '', nombreReferencia: '' })
 
@@ -102,25 +110,30 @@ export default function CatalogoFolios({ onVolver }: Props) {
   }
 
   function empezarEdicion(entrada: FolioCatalogoEntry): void {
-    setEditandoId(entrada.id)
+    setEditandoClave(claveEntrada(entrada))
     setBorrador({ folio: entrada.folio, nombreReferencia: entrada.nombreReferencia ?? '' })
     setError(null)
     setMensaje(null)
   }
 
-  async function guardarEdicion(id: number): Promise<void> {
+  async function guardarEdicion(entrada: FolioCatalogoEntry): Promise<void> {
     setError(null)
     setMensaje(null)
     setOcupado(true)
     try {
       const actualizado = await window.electronAPI.actualizarFolio({
-        id,
+        id: entrada.id,
+        origen: entrada.origen,
         folio: borrador.folio.trim(),
         nombreReferencia: borrador.nombreReferencia.trim() || null,
       })
       await recargar()
-      setEditandoId(null)
-      setMensaje(`Folio ${actualizado.folio} actualizado correctamente.`)
+      setEditandoClave(null)
+      setMensaje(
+        entrada.origen === 'evento'
+          ? `Folio ${actualizado.folio} actualizado en el evento y en sus constancias. Vuelve a generar los PDF para que lo reflejen.`
+          : `Folio ${actualizado.folio} actualizado correctamente.`,
+      )
     } catch (errorActual) {
       mostrarError(errorActual)
     } finally {
@@ -129,12 +142,15 @@ export default function CatalogoFolios({ onVolver }: Props) {
   }
 
   async function eliminar(entrada: FolioCatalogoEntry): Promise<void> {
-    if (!window.confirm(`¿Eliminar el folio ${entrada.folio} del catálogo?`)) return
+    const mensajeConfirmacion = entrada.origen === 'evento'
+      ? `El folio ${entrada.folio} pertenece al evento "${entrada.nombreReferencia ?? 'sin nombre'}". Se eliminarán permanentemente el evento y sus constancias de la base de datos. Los PDF ya generados permanecerán en sus carpetas. Esta acción no se puede deshacer. ¿Deseas continuar?`
+      : `¿Eliminar el folio ${entrada.folio} del catálogo? Esto solo quitará la reserva manual y dejará el folio libre; no eliminará eventos ni constancias.`
+    if (!window.confirm(mensajeConfirmacion)) return
     setError(null)
     setMensaje(null)
     setOcupado(true)
     try {
-      await window.electronAPI.eliminarFolio(entrada.id)
+      await window.electronAPI.eliminarFolio({ id: entrada.id, origen: entrada.origen })
       await recargar()
       setMensaje(`Folio ${entrada.folio} eliminado correctamente.`)
     } catch (errorActual) {
@@ -192,24 +208,26 @@ export default function CatalogoFolios({ onVolver }: Props) {
         {!cargando && foliosFiltrados.length > 0 && (
           <div className="table-wrap">
             <table>
-              <thead><tr><th>Folio</th><th>Referencia</th><th>Fecha de registro</th><th>Acciones</th></tr></thead>
+              <thead><tr><th>Folio</th><th>Referencia</th><th>Origen</th><th>Fecha de registro</th><th>Acciones</th></tr></thead>
               <tbody>
-                {foliosFiltrados.map((entrada) => editandoId === entrada.id ? (
-                  <tr key={entrada.id}>
+                {foliosFiltrados.map((entrada) => editandoClave === claveEntrada(entrada) ? (
+                  <tr key={claveEntrada(entrada)}>
                     <td><label className="catalogo-edit-field"><span className="visually-hidden">Folio</span><input value={borrador.folio} onChange={(e) => setBorrador({ ...borrador, folio: e.target.value })} /></label></td>
-                    <td><label className="catalogo-edit-field"><span className="visually-hidden">Referencia</span><input value={borrador.nombreReferencia} onChange={(e) => setBorrador({ ...borrador, nombreReferencia: e.target.value })} /></label></td>
+                    <td><label className="catalogo-edit-field"><span className="visually-hidden">Referencia</span><input value={borrador.nombreReferencia} disabled={entrada.origen === 'evento'} onChange={(e) => setBorrador({ ...borrador, nombreReferencia: e.target.value })} /></label></td>
+                    <td>{etiquetaOrigen(entrada)}</td>
                     <td>{fechaLegible(entrada.fechaRegistro)}</td>
                     <td>
                       <div className="catalogo-row-actions">
-                        <Button type="button" onClick={() => void guardarEdicion(entrada.id)} disabled={formularioOcupado || !borrador.folio.trim()}>Guardar</Button>
-                        <Button variant="text" type="button" onClick={() => setEditandoId(null)} disabled={ocupado}>Cancelar</Button>
+                        <Button type="button" onClick={() => void guardarEdicion(entrada)} disabled={formularioOcupado || !borrador.folio.trim()}>Guardar</Button>
+                        <Button variant="text" type="button" onClick={() => setEditandoClave(null)} disabled={ocupado}>Cancelar</Button>
                       </div>
                     </td>
                   </tr>
                 ) : (
-                  <tr key={entrada.id}>
+                  <tr key={claveEntrada(entrada)}>
                     <td>{entrada.folio}</td>
                     <td>{entrada.nombreReferencia ?? '—'}</td>
+                    <td>{etiquetaOrigen(entrada)}</td>
                     <td>{fechaLegible(entrada.fechaRegistro)}</td>
                     <td>
                       <div className="catalogo-row-actions">

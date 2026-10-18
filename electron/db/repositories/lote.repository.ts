@@ -3,6 +3,8 @@ import { orquestarGuardadoLote, type FilaLoteResuelta } from '../../business/orq
 import { separarParticipantes } from '../../business/separarParticipantes'
 import { normalizarCategoria, normalizarModalidad } from '../../business/validacion/validarFilaExcel'
 import { generarFolioAutomatico } from './folio.repository'
+import { obtenerConfiguracionReglas } from './configuracionReglas.repository'
+import { articuloEventoPersistido } from '../../business/reglasRedaccion/articuloEvento'
 import type { GuardarLoteResultado, FilaProcesada } from '../../../shared/types/ipc'
 
 function normalizarClave(valor: string): string {
@@ -43,6 +45,7 @@ export function guardarLoteRegular(
     const folio =
       folioSolicitado ??
       generarFolioAutomatico(primera.nombreEvento.trim(), primera.fechaConstancia.trim())
+    const { articuloEvento, formaArticuloEvento } = articuloEventoPersistido(primera.articuloEvento)
     const eventoExistente = db
       .prepare('SELECT id, tipo_plantilla FROM evento WHERE folio = ?')
       .get(folio) as { id: number; tipo_plantilla: string } | undefined
@@ -55,12 +58,15 @@ export function guardarLoteRegular(
       eventoId = eventoExistente.id
       db.prepare(
         `UPDATE evento
-         SET nombre_evento = ?, fecha_constancia = ?, modalidad = ?
+         SET nombre_evento = ?, fecha_constancia = ?, modalidad = ?,
+             articulo_evento = ?, forma_articulo_evento = ?
          WHERE id = ?`,
       ).run(
         primera.nombreEvento.trim(),
         primera.fechaConstancia.trim(),
         normalizarModalidad(primera.modalidad),
+        articuloEvento,
+        formaArticuloEvento,
         eventoId,
       )
       db.prepare(
@@ -71,14 +77,19 @@ export function guardarLoteRegular(
     } else {
       const eventoResultado = db
         .prepare(
-          `INSERT INTO evento (folio, nombre_evento, fecha_constancia, modalidad, tipo_plantilla, generacion, carrera)
-           VALUES (?, ?, ?, ?, 'regular', NULL, NULL)`,
+          `INSERT INTO evento (
+             folio, nombre_evento, fecha_constancia, modalidad, tipo_plantilla,
+             generacion, carrera, articulo_evento, forma_articulo_evento
+           )
+           VALUES (?, ?, ?, ?, 'regular', NULL, NULL, ?, ?)`,
         )
         .run(
           folio,
           primera.nombreEvento.trim(),
           primera.fechaConstancia.trim(),
           normalizarModalidad(primera.modalidad),
+          articuloEvento,
+          formaArticuloEvento,
         )
       eventoId = Number(eventoResultado.lastInsertRowid)
     }
@@ -158,7 +169,11 @@ export function guardarLoteRegular(
       }
     }
 
-    const decisiones = orquestarGuardadoLote(filasResueltas, folio)
+    const decisiones = orquestarGuardadoLote(
+      filasResueltas,
+      folio,
+      obtenerConfiguracionReglas().maxConstanciasPorPersona,
+    )
     const insertarConstancia = db.prepare(
       `INSERT INTO constancia (evento_id, rol_id, ponencia, texto_generado, es_personalizado,
        tipo_documento, numero_para_persona_evento, universidad_origen, fecha_generacion, folio_interno, estado)

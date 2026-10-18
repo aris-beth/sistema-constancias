@@ -44,7 +44,7 @@ describe('generarTextoConstancia', () => {
         }),
       ).toEqual({
         textoGenerado:
-          'Por participar como Organizador, en el evento Congreso 2026, en la Facultad de Ciencias de la Computación.',
+          'Por haber participado como Organizador, del Congreso 2026, en la Facultad de Ciencias de la Computación.',
         esPersonalizado: false,
         universidadExterna: null,
       })
@@ -64,7 +64,7 @@ describe('generarTextoConstancia', () => {
   it('genera el texto de un rol y resuelve la sede', () => {
     expect(generarTextoConstancia(datosBase)).toEqual({
       textoGenerado:
-        'Por participar como Organizador, en el evento Congreso 2026, en la Facultad de Ciencias de la Computación.',
+        'Por haber participado como Organizador, del Congreso 2026, en la Facultad de Ciencias de la Computación.',
       esPersonalizado: false,
       universidadExterna: null,
     })
@@ -123,28 +123,28 @@ describe('generarTextoConstancia', () => {
     ).toContain('ReVisOrA De LiBrO')
   })
 
-  it('marca la institución y adapta el cierre para una persona externa', () => {
+  it('marca la institución externa y conserva la sede institucional', () => {
     expect(
       generarTextoConstancia({
         ...datosBase,
         universidadOrigen: 'Universidad Nacional',
       }),
     ).toEqual({
-        textoGenerado: 'Por participar como Organizador, en el evento Congreso 2026.',
+        textoGenerado:
+          'Por haber participado como Organizador, del Congreso 2026, en la Facultad de Ciencias de la Computación.',
       esPersonalizado: false,
       universidadExterna: 'Universidad Nacional',
     })
   })
 
-  it('adapta el cierre externo sin mencionar la Facultad', () => {
+  it('conserva la sede para una persona externa', () => {
     const resultado = generarTextoConstancia({
       ...datosBase,
       universidadOrigen: 'Universidad Iberoamericana',
       modalidad: 'Presencial CU' as const,
     })
 
-    expect(resultado.textoGenerado.endsWith('en el evento Congreso 2026.')).toBe(true)
-    expect(resultado.textoGenerado).not.toContain('Facultad de Ciencias de la Computación')
+    expect(resultado.textoGenerado.endsWith('en la Facultad de Ciencias de la Computación.')).toBe(true)
   })
 
   it('conserva sin cambios el texto personalizado de una universidad externa', () => {

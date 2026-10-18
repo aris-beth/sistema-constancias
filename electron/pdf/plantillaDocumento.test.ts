@@ -3,6 +3,7 @@ import {
   crearHtmlDocumento,
   crearPaginaGraduacion,
   crearPaginaRegular,
+  elegirSelloParaDocumento,
   formatearFechaParaDocumento,
   formatearNombreGraduacion,
   institucionParaDocumento,
@@ -17,7 +18,8 @@ import type {
 } from '../../shared/types/configuracion'
 
 const sello = {
-  nombreDirectora: 'Firma de prueba',
+  personaFirmante: 'Firma de prueba',
+  cargoFirmante: 'Directora',
   rutaSelloConFirma: null,
   rutaSelloSinFirma: null,
 } as unknown as ConfiguracionSello
@@ -83,6 +85,38 @@ describe('plantillaDocumento', () => {
     })
     expect(conFirma).not.toContain('Firma de prueba')
     expect(conFirma).not.toContain('sello-firmante')
+  })
+
+  it('imprime persona firmante y cargo configurados cuando se usa el sello en blanco', () => {
+    const html = crearPaginaRegular(
+      documento(),
+      { ...sello, personaFirmante: 'Dra. Ejemplo', cargoFirmante: 'Directora interina' } as unknown as ConfiguracionSello,
+      { ...RECURSOS_VACIOS, selloSinFirma: 'data:image/png;base64,CCCC' },
+    )
+    expect(html).toContain('<strong>Dra. Ejemplo</strong><span>Directora interina</span>')
+  })
+
+  it('sube ligeramente el nombre y cargo cuando el sello no incluye firma', () => {
+    const html = crearHtmlDocumento(
+      [crearPaginaRegular(documento(), sello, { ...RECURSOS_VACIOS, selloSinFirma: 'data:image/png;base64,CCCC' })],
+      { ...RECURSOS_VACIOS, selloSinFirma: 'data:image/png;base64,CCCC' },
+    )
+
+    expect(html).toContain(
+      '.sello-firmante { position: absolute; left: 0; top: 1.62in; width: 100%; text-align: center; font-size: 12pt; line-height: 1.3; }',
+    )
+  })
+
+  it('elegirSelloParaDocumento: con firma gana; si no, en blanco con texto; si no hay ninguno, solo texto', () => {
+    expect(
+      elegirSelloParaDocumento({ selloConFirma: 'A', selloSinFirma: 'B' }),
+    ).toEqual({ imagen: 'A', incluyeFirmante: true })
+    expect(
+      elegirSelloParaDocumento({ selloConFirma: null, selloSinFirma: 'B' }),
+    ).toEqual({ imagen: 'B', incluyeFirmante: false })
+    expect(
+      elegirSelloParaDocumento({ selloConFirma: null, selloSinFirma: null }),
+    ).toEqual({ imagen: null, incluyeFirmante: false })
   })
 
   it('muestra "otorga la presente" sin anteponer "constancia" en el encabezado', () => {

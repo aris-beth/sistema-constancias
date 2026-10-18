@@ -17,7 +17,7 @@ import {
   registroAFilaCrudaGraduacion,
 } from './utils/registros';
 import type { FilaProcesada, FilaProcesadaGraduacion } from '../shared/types/ipc';
-import type { Evento } from '../shared/types/evento';
+import type { ArticuloEvento, Evento } from '../shared/types/evento';
 import './styles/design-system.css';
 
 type PasoConstancias = 'carga' | 'validacion' | 'previsualizacion' | 'generar';
@@ -99,6 +99,7 @@ const App: React.FC = () => {
     confianza: fila.confianza,
     nombrePonencia: fila.nombrePonencia,
     nombreEvento: fila.nombreEvento,
+    articuloEvento: fila.articuloEvento ?? null,
     fechaConstancia: fila.fechaConstancia,
     universidadOrigen: fila.universidadOrigen,
     modalidad: fila.modalidad,
@@ -210,7 +211,17 @@ const App: React.FC = () => {
   const manejarCambiarNombreEvento = (nombre: string) => {
     if (modoConstancia !== 'regular') return;
     setFolioPersistido(null);
-    setRegistros(prev => prev.map(r => ({ ...r, nombreEvento: nombre })));
+    // Al cambiar el nombre, el artículo anterior ("del"/"de la") puede ya no
+    // corresponder: se limpia y el sistema vuelve a proponerlo al actualizar.
+    setRegistros(prev => prev.map(r => ({ ...r, nombreEvento: nombre, articuloEvento: null })));
+    marcarPendientes(registros.map(r => r.idFila));
+  };
+
+  // Artículo con el que se redacta el nombre del evento: también es un dato por lote.
+  const manejarCambiarArticuloEvento = (articulo: ArticuloEvento | null) => {
+    if (modoConstancia !== 'regular') return;
+    setFolioPersistido(null);
+    setRegistros(prev => prev.map(r => ({ ...r, articuloEvento: articulo })));
     marcarPendientes(registros.map(r => r.idFila));
   };
 
@@ -236,7 +247,7 @@ const App: React.FC = () => {
         if (!nueva || nueva.error) return r;
         const manuales = camposManuales.current.get(r.idFila) ?? new Set<string>();
         const actualizado: RegistroExcel = { ...r };
-        if (!manuales.has('nombre')) actualizado.nombre = nueva.nombreNormalizado ?? r.nombre;
+        actualizado.nombre = nueva.nombreNormalizado ?? r.nombre;
         if (!manuales.has('textoGenerado')) actualizado.textoGenerado = nueva.textoGenerado;
         actualizado.confianza = nueva.confianza;
         if (modoConstancia === 'regular') {
@@ -244,6 +255,8 @@ const App: React.FC = () => {
           actualizado.esPersonalizado = nueva.esPersonalizado;
           actualizado.universidadExterna = nueva.universidadExterna;
           actualizado.fechaConstancia = nueva.fechaConstancia;
+          // Si el artículo estaba vacío, el backend devuelve su propuesta.
+          if (!r.articuloEvento) actualizado.articuloEvento = nueva.articuloEvento ?? null;
         }
         return actualizado;
       }));
@@ -378,6 +391,7 @@ const App: React.FC = () => {
             onActualizarRegistro={manejarActualizarRegistro}
             modo={modoConstancia}
             onCambiarNombreEvento={manejarCambiarNombreEvento}
+            onCambiarArticuloEvento={manejarCambiarArticuloEvento}
             filasPendientes={filasPendientes}
             actualizando={actualizando}
             mensajeActualizacion={mensajeActualizacion}

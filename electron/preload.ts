@@ -15,8 +15,11 @@ import type {
   FilaProcesadaGraduacion,
   ConfiguracionInicial,
   ConfiguracionSelloEntrada,
+  SelloCatalogoEntrada,
+  ConfiguracionReglasEntrada,
   ConfiguracionFirmantesGraduacionEntrada,
   ActualizarFolioEntrada,
+  EliminarFolioEntrada,
   RegistrarFolioEntrada,
   EstadisticasEntrada,
   EstadisticasResultado,
@@ -54,20 +57,22 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('pdf:previsualizar', entrada),
   obtenerConfiguracion: (): Promise<ConfiguracionInicial> =>
     ipcRenderer.invoke('configuracion:obtener'),
-  seleccionarSelloConFirma: (): Promise<string | null> =>
-    ipcRenderer.invoke('configuracion:seleccionarSelloConFirma'),
-  seleccionarSelloSinFirma: (): Promise<string | null> =>
-    ipcRenderer.invoke('configuracion:seleccionarSelloSinFirma'),
+  agregarSello: (entrada: SelloCatalogoEntrada) =>
+    ipcRenderer.invoke('configuracion:agregarSello', entrada),
+  reemplazarSello: (id: number) =>
+    ipcRenderer.invoke('configuracion:reemplazarSello', id),
   actualizarConfiguracionSello: (entrada: ConfiguracionSelloEntrada) =>
     ipcRenderer.invoke('configuracion:actualizarSello', entrada),
   actualizarFirmantesGraduacion: (entrada: ConfiguracionFirmantesGraduacionEntrada) =>
     ipcRenderer.invoke('configuracion:actualizarFirmantesGraduacion', entrada),
+  actualizarConfiguracionReglas: (entrada: ConfiguracionReglasEntrada) =>
+    ipcRenderer.invoke('configuracion:actualizarReglas', entrada),
   listarFolios: () => ipcRenderer.invoke('configuracion:listarFolios'),
   registrarFolio: (entrada: RegistrarFolioEntrada) =>
     ipcRenderer.invoke('configuracion:registrarFolio', entrada),
   actualizarFolio: (entrada: ActualizarFolioEntrada) =>
     ipcRenderer.invoke('configuracion:actualizarFolio', entrada),
-  eliminarFolio: (id: number) => ipcRenderer.invoke('configuracion:eliminarFolio', id),
+  eliminarFolio: (entrada: EliminarFolioEntrada) => ipcRenderer.invoke('configuracion:eliminarFolio', entrada),
   consultarEstadisticas: (entrada: EstadisticasEntrada): Promise<EstadisticasResultado> =>
     ipcRenderer.invoke('estadisticas:consultar', entrada),
 })

@@ -15,6 +15,13 @@ describe('calcularEncabezadosPorFila', () => {
     expect(resultado.get(8)).toBe('RECONOCIMIENTO')
   })
 
+  it('usa el máximo configurado: con máximo 2, la 3ª aparición es RECONOCIMIENTO', () => {
+    const filas = Array.from({ length: 3 }, (_v, i) => fila(i + 2, 'PEREZ JUAN'))
+    const resultado = calcularEncabezadosPorFila(filas, 2)
+    expect(resultado.get(3)).toBe('CONSTANCIA')
+    expect(resultado.get(4)).toBe('RECONOCIMIENTO')
+  })
+
   it('las filas con error no cuentan para el conteo', () => {
     const filas = [
       ...Array.from({ length: 6 }, (_v, i) => fila(i + 2, 'PEREZ JUAN')),

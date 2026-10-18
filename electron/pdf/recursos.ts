@@ -89,13 +89,29 @@ export async function armarRecursos(
   let selloConFirma: string | null = null
   let selloSinFirma: string | null = null
   if (sello) {
-    selloConFirma = sello.rutaSelloConFirma ? await leerImagenComoDataUri(sello.rutaSelloConFirma) : null
-    if (sello.rutaSelloConFirma && !selloConFirma) {
-      advertencias.push(`No se pudo leer el sello con firma (${sello.rutaSelloConFirma}).`)
-    }
-    selloSinFirma = sello.rutaSelloSinFirma ? await leerImagenComoDataUri(sello.rutaSelloSinFirma) : null
-    if (sello.rutaSelloSinFirma && !selloSinFirma) {
-      advertencias.push(`No se pudo leer el sello en blanco (${sello.rutaSelloSinFirma}).`)
+    const seleccionado = sello.sellos?.find((opcion) => opcion.id === sello.selloActivoId)
+    if (sello.selloActivoId !== null && sello.selloActivoId !== undefined && !seleccionado) {
+      advertencias.push('El sello activo no se encontró en el catálogo; revisa la configuración de plantillas.')
+    } else if (seleccionado) {
+      const imagen = await leerImagenComoDataUri(seleccionado.rutaImagen)
+      if (!imagen) {
+        advertencias.push(`No se pudo leer el sello activo "${seleccionado.nombre}" (${seleccionado.rutaImagen}).`)
+      } else if (seleccionado.incluyeFirma) {
+        selloConFirma = imagen
+      } else {
+        selloSinFirma = imagen
+      }
+    } else {
+      // Compatibilidad con datos heredados o previsualizaciones construidas
+      // antes de que existiera el catálogo de sellos.
+      selloConFirma = sello.rutaSelloConFirma ? await leerImagenComoDataUri(sello.rutaSelloConFirma) : null
+      if (sello.rutaSelloConFirma && !selloConFirma) {
+        advertencias.push(`No se pudo leer el sello con firma (${sello.rutaSelloConFirma}).`)
+      }
+      selloSinFirma = sello.rutaSelloSinFirma ? await leerImagenComoDataUri(sello.rutaSelloSinFirma) : null
+      if (sello.rutaSelloSinFirma && !selloSinFirma) {
+        advertencias.push(`No se pudo leer el sello en blanco (${sello.rutaSelloSinFirma}).`)
+      }
     }
   }
 

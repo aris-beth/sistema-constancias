@@ -24,6 +24,16 @@ describe('normalizarNombre', () => {
     })
   })
 
+  it('normaliza el grado y dos apellidos sin volver a rotar el orden', () => {
+    const resultado = normalizarNombre('Dra. Ivonne Balderas Gutierrez', catalogo)
+
+    expect(resultado).toEqual({
+      nombreNormalizado: 'DRA. BALDERAS GUTIERREZ IVONNE',
+      gradoDetectado: 'DRA.',
+      confianza: 'alta',
+    })
+  })
+
   it.each([
     ['JUAN PEREZ', 'PEREZ JUAN'],
     ['JUAN PEREZ LOPEZ', 'PEREZ LOPEZ JUAN'],

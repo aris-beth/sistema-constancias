@@ -23,6 +23,18 @@ describe('determinarTipoDocumento', () => {
     })
   })
 
+  it('respeta un máximo configurado distinto: con máximo 3, la 4ª ya es reconocimiento', () => {
+    expect(determinarTipoDocumento(2, 3).tipoDocumento).toBe('constancia')
+    expect(determinarTipoDocumento(3, 3)).toEqual({
+      tipoDocumento: 'reconocimiento',
+      numeroParaPersonaEvento: 4,
+    })
+  })
+
+  it.each([0, -1, 2.5, Number.NaN])('rechaza el máximo configurado inválido %s', (maximo) => {
+    expect(() => determinarTipoDocumento(0, maximo)).toThrow()
+  })
+
   it.each([-1, 1.5, Number.NaN, Number.POSITIVE_INFINITY])(
     'rechaza el conteo inválido %s',
     (conteo) => {

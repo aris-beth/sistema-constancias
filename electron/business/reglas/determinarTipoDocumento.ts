@@ -1,12 +1,22 @@
 import type { TipoDocumento } from '../../../shared/types/constancia'
 
 /**
- * A partir de la 7ª constancia de una misma persona dentro del mismo
- * evento (sumando todos sus roles), el sistema cambia automáticamente el
- * encabezado de "CONSTANCIA" a "RECONOCIMIENTO" (sección 5.3 de
- * requerimientos, criterio de aceptación #4).
+ * Máximo de constancias que una misma persona puede recibir dentro del
+ * mismo evento (sumando todos sus roles). La siguiente se emite como
+ * "RECONOCIMIENTO" (sección 5.3 de requerimientos, criterio de aceptación
+ * #4). El valor vigente es editable desde el Editor de plantillas
+ * (`configuracion_reglas`); este es el valor de fábrica: 6 constancias y la
+ * 7ª ya es reconocimiento.
  */
-const NUMERO_MINIMO_PARA_RECONOCIMIENTO = 7
+export const MAX_CONSTANCIAS_POR_PERSONA_PREDETERMINADO = 6
+
+/** Tope razonable para el campo editable: evita capturar un valor absurdo por error. */
+export const MAX_CONSTANCIAS_POR_PERSONA_LIMITE = 99
+
+/** Número de constancia (1ª, 2ª, ...) a partir del cual el documento es reconocimiento. */
+export function numeroMinimoParaReconocimiento(maxConstanciasPorPersona: number): number {
+  return maxConstanciasPorPersona + 1
+}
 
 export interface ResultadoTipoDocumento {
   tipoDocumento: TipoDocumento
@@ -35,9 +45,12 @@ export interface ResultadoTipoDocumento {
  *
  * @param conteoActualDeConstanciasGeneradas cuántas constancias 'generada'
  *   tiene ya esa persona en ese evento, ANTES de la que se está por crear.
+ * @param maxConstanciasPorPersona máximo configurado de constancias por
+ *   persona en un evento; la siguiente ya es reconocimiento.
  */
 export function determinarTipoDocumento(
   conteoActualDeConstanciasGeneradas: number,
+  maxConstanciasPorPersona: number = MAX_CONSTANCIAS_POR_PERSONA_PREDETERMINADO,
 ): ResultadoTipoDocumento {
   if (!Number.isInteger(conteoActualDeConstanciasGeneradas)) {
     throw new Error('El conteo de constancias previas debe ser un número entero.')
@@ -46,9 +59,15 @@ export function determinarTipoDocumento(
     throw new Error('El conteo de constancias previas no puede ser negativo.')
   }
 
+  if (!Number.isInteger(maxConstanciasPorPersona) || maxConstanciasPorPersona < 1) {
+    throw new Error('El máximo de constancias por persona debe ser un entero mayor o igual a 1.')
+  }
+
   const numeroParaPersonaEvento = conteoActualDeConstanciasGeneradas + 1
   const tipoDocumento: TipoDocumento =
-    numeroParaPersonaEvento >= NUMERO_MINIMO_PARA_RECONOCIMIENTO ? 'reconocimiento' : 'constancia'
+    numeroParaPersonaEvento >= numeroMinimoParaReconocimiento(maxConstanciasPorPersona)
+      ? 'reconocimiento'
+      : 'constancia'
 
   return { tipoDocumento, numeroParaPersonaEvento }
 }
