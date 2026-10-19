@@ -16,14 +16,19 @@ export default function PanelEstadisticas({ onVolver }: Props) {
 
   useEffect(() => { void consultar() }, [])
 
-  async function consultar(): Promise<void> {
+  async function consultar(
+    filtrosConsulta: FiltrosEstadisticas = filtros,
+    periodoAConsulta: Periodo = periodoA,
+    periodoBConsulta: Periodo = periodoB,
+  ): Promise<void> {
     setCargando(true)
     setError(null)
     try {
-      const comparacion = periodoA.fechaDesde || periodoA.fechaHasta || periodoB.fechaDesde || periodoB.fechaHasta
-        ? { periodoA, periodoB }
+      const comparacion = periodoAConsulta.fechaDesde || periodoAConsulta.fechaHasta ||
+        periodoBConsulta.fechaDesde || periodoBConsulta.fechaHasta
+        ? { periodoA: periodoAConsulta, periodoB: periodoBConsulta }
         : undefined
-      setResultado(await window.electronAPI.consultarEstadisticas({ filtros, comparacion }))
+      setResultado(await window.electronAPI.consultarEstadisticas({ filtros: filtrosConsulta, comparacion }))
     } catch (errorActual) {
       setError(errorActual instanceof Error ? errorActual.message : String(errorActual))
     } finally {
@@ -37,6 +42,14 @@ export default function PanelEstadisticas({ onVolver }: Props) {
 
   function cambiarPeriodo(setPeriodo: Dispatch<SetStateAction<Periodo>>, campo: keyof Periodo, valor: string): void {
     setPeriodo((actual) => ({ ...actual, [campo]: valor || null }))
+  }
+
+  function limpiarFiltros(): void {
+    const periodoVacio: Periodo = { fechaDesde: null, fechaHasta: null }
+    setFiltros(vacios)
+    setPeriodoA(periodoVacio)
+    setPeriodoB(periodoVacio)
+    void consultar(vacios, periodoVacio, periodoVacio)
   }
 
   return (
@@ -55,7 +68,10 @@ export default function PanelEstadisticas({ onVolver }: Props) {
         <div className="comparison-inputs">
           <div><h3>Comparación entre periodos</h3><div className="stats-filter-grid"><Field label="Periodo A · Desde"><input type="date" value={periodoA.fechaDesde ?? ''} onChange={(evento) => cambiarPeriodo(setPeriodoA, 'fechaDesde', evento.target.value)} /></Field><Field label="Periodo A · Hasta"><input type="date" value={periodoA.fechaHasta ?? ''} onChange={(evento) => cambiarPeriodo(setPeriodoA, 'fechaHasta', evento.target.value)} /></Field><Field label="Periodo B · Desde"><input type="date" value={periodoB.fechaDesde ?? ''} onChange={(evento) => cambiarPeriodo(setPeriodoB, 'fechaDesde', evento.target.value)} /></Field><Field label="Periodo B · Hasta"><input type="date" value={periodoB.fechaHasta ?? ''} onChange={(evento) => cambiarPeriodo(setPeriodoB, 'fechaHasta', evento.target.value)} /></Field></div></div>
   </div>
-        <Button type="submit" disabled={cargando}>{cargando ? 'Consultando...' : 'Actualizar estadísticas'}</Button>
+        <div className="button-row">
+          <Button type="submit" disabled={cargando}>{cargando ? 'Consultando...' : 'Actualizar estadísticas'}</Button>
+          <Button variant="secondary" type="button" onClick={limpiarFiltros} disabled={cargando}>Limpiar filtros</Button>
+        </div>
       </form>
 
       {error && <p className="status-message status-message--error">Error: {error}</p>}

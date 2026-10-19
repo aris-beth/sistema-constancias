@@ -127,6 +127,20 @@ describe('plantillaDocumento', () => {
     expect(html).not.toContain('constancia otorga la presente')
   })
 
+  it('usa "otorga el presente" en todos los reconocimientos', () => {
+    const reconocimientoRegular = crearPaginaRegular(
+      documento({ encabezado: 'RECONOCIMIENTO' }),
+      sello,
+      RECURSOS_VACIOS,
+    )
+    const reconocimientoGraduacion = crearPaginaGraduacion(documento(), firmantes)
+
+    for (const html of [reconocimientoRegular, reconocimientoGraduacion]) {
+      expect(html).toContain('<div class="subtitulo otorga">otorga el presente</div>')
+      expect(html).not.toContain('otorga la presente')
+    }
+  })
+
   it('centra el folio entre el escudo y el borde inferior y muestra "A:" en negrita', () => {
     const html = crearHtmlDocumento(
       [crearPaginaRegular(documento(), sello, RECURSOS_VACIOS)],

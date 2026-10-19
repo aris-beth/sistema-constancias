@@ -182,10 +182,11 @@ function destinatarioHtml(nombre: string, escala = 1): { html: string; tamanoPt:
 const ESCALA_NOMBRE_GRADUACION = 1.28
 
 function encabezadoInstitucional(encabezado: string): string {
+  const textoOtorga = encabezado === 'RECONOCIMIENTO' ? 'otorga el presente' : 'otorga la presente'
   return `<header class="encabezado-inst">
         <div class="universidad">La Benemérita Universidad Autónoma de Puebla</div>
         <div class="subtitulo">A través de la Facultad de Ciencias de la Computación</div>
-        <div class="subtitulo otorga">otorga la presente</div>
+        <div class="subtitulo otorga">${textoOtorga}</div>
         <div class="titulo-doc">${escaparHtml(encabezado)}</div>
       </header>`
 }
