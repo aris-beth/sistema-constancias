@@ -1,10 +1,11 @@
 import { app, BrowserWindow } from 'electron'
-import { randomUUID } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import type { Evento } from '../../shared/types/evento'
 import type { ConfiguracionFirmantesGraduacion, ConfiguracionSello } from '../../shared/types/configuracion'
 import type { ErrorPdfRol, ResumenPdfRol } from '../../shared/types/ipc'
+import { autoajustarTexto } from '../business/autoajuste/autoajustarTexto'
 import {
   crearHtmlDocumento,
   crearPaginaGraduacion,
@@ -38,19 +39,41 @@ export function carpetaResources(): string {
  * `data:` tiene un límite de tamaño (~2 MB en Chromium) que un lote grande
  * supera fácilmente, y desde ella no se pueden leer imágenes file://.
  */
-async function imprimirHtml(html: string): Promise<Buffer> {
+interface ResultadoImpresion {
+  pdf: Buffer
+  paginasDesbordadas: number[]
+}
+
+async function imprimirHtml(html: string): Promise<ResultadoImpresion> {
   const archivo = path.join(app.getPath('temp'), `constancias-${randomUUID()}.html`)
   await fs.writeFile(archivo, html, 'utf-8')
   const ventana = new BrowserWindow({ show: false })
   try {
     await ventana.loadFile(archivo)
-    return await ventana.webContents.printToPDF({
+    const paginasDesbordadas = await ventana.webContents.executeJavaScript<number[]>(`
+      (async () => {
+        await document.fonts.ready;
+        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        return Array.from(document.querySelectorAll('.pagina')).flatMap((pagina, indice) => {
+          const elementos = [
+            pagina,
+            pagina.querySelector('.col-der'),
+            pagina.querySelector('.centro')
+          ].filter(Boolean);
+          return elementos.some((elemento) => elemento.scrollHeight > elemento.clientHeight + 1)
+            ? [indice]
+            : [];
+        });
+      })()
+    `)
+    const pdf = await ventana.webContents.printToPDF({
       pageSize: 'Letter',
       landscape: true,
       printBackground: true,
       preferCSSPageSize: true,
       margins: { marginType: 'none' },
     })
+    return { pdf, paginasDesbordadas }
   } finally {
     if (!ventana.isDestroyed()) ventana.destroy()
     await fs.rm(archivo, { force: true })
@@ -59,6 +82,14 @@ async function imprimirHtml(html: string): Promise<Buffer> {
 
 function nombreSeguro(valor: string, respaldo: string): string {
   return valor.replace(/[^a-z0-9áéíóúñ]+/gi, '_').replace(/^_|_$/g, '') || respaldo
+}
+
+export function nombreCarpetaEvento(evento: Pick<Evento, 'folio' | 'nombreEvento'>): string {
+  const folioSeguro = nombreSeguro(evento.folio, 'folio')
+  const sufijoUnico = folioSeguro === evento.folio
+    ? ''
+    : `_${createHash('sha256').update(evento.folio).digest('hex').slice(0, 12)}`
+  return `${folioSeguro}${sufijoUnico}_${nombreSeguro(evento.nombreEvento, 'evento')}`
 }
 
 export async function generarPdfsPorRol(
@@ -72,7 +103,7 @@ export async function generarPdfsPorRol(
   if (grupos.length === 0) throw new Error('El evento no tiene documentos para generar.')
 
   const esGraduacion = evento.tipoPlantilla === 'graduacion'
-  const carpetaEvento = path.join(carpetaDestino, `${evento.folio}_${nombreSeguro(evento.nombreEvento, 'evento')}`)
+  const carpetaEvento = path.join(carpetaDestino, nombreCarpetaEvento(evento))
   const carpetaPdfs = path.join(carpetaEvento, 'PDFs')
   await fs.mkdir(carpetaPdfs, { recursive: true })
 
@@ -88,10 +119,38 @@ export async function generarPdfsPorRol(
       const paginas = grupo.documentos.map((documento) =>
         esGraduacion ? crearPaginaGraduacion(documento, firmantes) : crearPaginaRegular(documento, sello, recursos),
       )
-      const buffer = await imprimirHtml(crearHtmlDocumento(paginas, recursos))
+      const { pdf, paginasDesbordadas } = await imprimirHtml(
+        crearHtmlDocumento(paginas, recursos),
+      )
       const ruta = path.join(carpetaPdfs, `${nombreSeguro(grupo.nombreRol, 'sin_rol')}.pdf`)
-      await fs.writeFile(ruta, buffer)
+      await fs.writeFile(ruta, pdf)
       roles.push({ rol: grupo.nombreRol, cantidad: grupo.documentos.length, ruta })
+      for (const documento of grupo.documentos) {
+        const camposAjustados = [
+          { nombre: 'nombre', texto: documento.nombre },
+          ...(!esGraduacion && documento.ponencia
+            ? [{ nombre: 'ponencia', texto: documento.ponencia }]
+            : []),
+        ] as const
+        for (const campo of camposAjustados) {
+          if (autoajustarTexto(campo.texto, campo.nombre).excedeLimiteCalibrado) {
+            const etiquetaCampo = campo.nombre === 'nombre' ? 'El nombre' : 'La ponencia'
+            advertencias.push(
+              `${etiquetaCampo} del documento con folio interno "${documento.folioInterno}" ` +
+                `del rol "${grupo.nombreRol}" supera el rango calibrado; se aplicó el ajuste mínimo. ` +
+                'Revisa visualmente el PDF antes de entregarlo.',
+            )
+          }
+        }
+      }
+      for (const indice of paginasDesbordadas) {
+        const documento = grupo.documentos[indice]
+        if (!documento) continue
+        advertencias.push(
+          `El documento con folio interno "${documento.folioInterno}" del rol "${grupo.nombreRol}" ` +
+            'desborda el espacio disponible y podría aparecer recortado. Revisa la extensión del texto.',
+        )
+      }
     } catch (error) {
       errores.push({
         rol: grupo.nombreRol,

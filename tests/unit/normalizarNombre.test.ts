@@ -54,9 +54,9 @@ describe('normalizarNombre', () => {
     expect(resultado.confianza).toBe('baja')
   })
 
-  it('mantiene confianza alta con exactamente cinco palabras', () => {
+  it('marca baja confianza con un conector ambiguo aunque tenga cinco palabras', () => {
     const resultado = normalizarNombre('Juan Carlos de la Torre', catalogo)
-    expect(resultado.confianza).toBe('alta')
+    expect(resultado.confianza).toBe('baja')
   })
 
   it('reordena correctamente dos nombres y dos apellidos', () => {
@@ -99,6 +99,7 @@ describe('normalizarNombre', () => {
     expect(resultado.nombreNormalizado).toBe(
       'Dra. ETCHEVERRY DOGER ERIKA BEATRIZ, Dra. JENNIFER ANTON SARABIA Y KARLA MARISOL TEUTLI MELLADO',
     )
+    expect(resultado.confianza).toBe('baja')
   })
 
   it('trata una celda sin comas como una sola persona', () => {

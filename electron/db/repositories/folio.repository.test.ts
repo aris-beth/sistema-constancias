@@ -73,6 +73,19 @@ describe('folios: lista completa y edición', () => {
     expect(() => registrarFolioCatalogo({ folio: 'EFAC-2026-001', nombreReferencia: null })).toThrow(/evento/i)
   })
 
+  it('permite folios históricos con separadores de ruta y dos puntos', () => {
+    expect(
+      registrarFolioCatalogo({ folio: '05/15:2020', nombreReferencia: 'Evento anterior' }).folio,
+    ).toBe('05/15:2020')
+  })
+
+  it('rechaza caracteres no permitidos al registrar un folio', () => {
+    expect(() => registrarFolioCatalogo({ folio: 'FOLIO\u0000ANTERIOR', nombreReferencia: null }))
+      .toThrow(/caracteres no permitidos/i)
+    expect(() => registrarFolioCatalogo({ folio: 'FOLIO?ANTERIOR', nombreReferencia: null }))
+      .toThrow(/caracteres no permitidos/i)
+  })
+
   it('eliminar un folio manual libera solo la reserva y conserva eventos y constancias', () => {
     const eventoId = crearEventoConConstancias('EFAC-2026-001', 'Evento Facultad')
     const reserva = registrarFolioCatalogo({ folio: 'RESERVADO-2026-001', nombreReferencia: 'Reserva' })

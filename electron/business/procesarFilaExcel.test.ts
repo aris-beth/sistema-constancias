@@ -38,6 +38,32 @@ describe('procesarFilaExcel', () => {
     expect(resultado.participantes).toHaveLength(0)
   })
 
+  it.each([
+    'Participante',
+    'Ganadora',
+    'Ganadores',
+    'Ganadoras',
+    'Jurados',
+    'Asistentes',
+    'Moderador',
+  ])('valida y genera una plantilla para %s sin pedir texto personalizado', (participaComo) => {
+    const resultado = procesarFilaExcel(
+      {
+        ...filaBase,
+        participaComo,
+        nombrePonencia: ['Ganadora', 'Ganadores', 'Ganadoras'].includes(participaComo)
+          ? 'mejor proyecto'
+          : null,
+        textoPersonalizado: null,
+      },
+      new Map(),
+      ROLES_RECONOCIDOS,
+    )
+
+    expect(resultado.error).toBeNull()
+    expect(resultado.textoGenerado).toBeTruthy()
+  })
+
   it('normaliza cada nombre de la fila cuando los participantes están unidos por "y"', () => {
     const resultado = procesarFilaExcel(
       {

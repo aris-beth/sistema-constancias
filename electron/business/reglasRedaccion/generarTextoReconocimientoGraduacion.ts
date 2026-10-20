@@ -36,8 +36,8 @@ const PLANTILLAS_POR_SUBTIPO: Record<string, string> = {
 
 /** Catálogo base de subtipos (sección 4.1/5.2 de requerimientos). Se
  * combina con `subtipo_graduacion` (base de datos) en la capa de IPC para
- * la validación del Excel, igual que ROLES_RECONOCIDOS se combina con la
- * tabla `rol` para el flujo regular. */
+ * la validación del Excel. En el flujo regular solo se reconocen roles con
+ * una plantilla de redacción implementada. */
 export const SUBTIPOS_GRADUACION_RECONOCIDOS = [
   'Integrante de generación',
   'Distinción al Mérito Académico',

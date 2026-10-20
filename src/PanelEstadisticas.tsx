@@ -109,11 +109,72 @@ function TablaDesglose({ filas, etiqueta }: { filas: Array<{ etiqueta: string; d
   return <div className="table-wrap"><table><thead><tr><th>{etiqueta}</th><th>Documentos</th></tr></thead><tbody>{filas.map((fila) => <tr key={fila.etiqueta}><td>{fila.etiqueta}</td><td><strong>{fila.documentos}</strong></td></tr>)}</tbody></table></div>
 }
 
+function etiquetaFecha(fecha: string): string {
+  const iso = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(fecha)
+  if (iso) return `${iso[3].padStart(2, '0')}/${iso[2].padStart(2, '0')}/${iso[1].slice(-2)}`
+
+  const numerica = /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/.exec(fecha)
+  if (numerica) return `${numerica[1].padStart(2, '0')}/${numerica[2].padStart(2, '0')}/${numerica[3].slice(-2)}`
+
+  const localizada = /^(\d{1,2}) de ([\p{L}]+) de (\d{4})$/iu.exec(fecha.trim())
+  if (!localizada) return fecha
+
+  const meses: Record<string, string> = {
+    enero: '01',
+    febrero: '02',
+    marzo: '03',
+    abril: '04',
+    mayo: '05',
+    junio: '06',
+    julio: '07',
+    agosto: '08',
+    septiembre: '09',
+    octubre: '10',
+    noviembre: '11',
+    diciembre: '12',
+  }
+  const mes = meses[localizada[2].normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()]
+  return mes
+    ? `${localizada[1].padStart(2, '0')}/${mes}/${localizada[3].slice(-2)}`
+    : fecha
+}
+
 function GraficaTendencia({ puntos }: { puntos: Array<{ fecha: string; documentos: number; eventos: number }> }): JSX.Element {
   if (!puntos.length) return <p>No hay documentos generados en el periodo seleccionado.</p>
-  const ancho = 720
+  const ancho = Math.max(720, 80 + (puntos.length - 1) * 56)
   const alto = 220
   const maximo = Math.max(...puntos.map((punto) => punto.documentos), 1)
-  const puntosSvg = puntos.map((punto, indice) => ({ ...punto, x: puntos.length === 1 ? ancho / 2 : 30 + (indice * (ancho - 60)) / (puntos.length - 1), y: alto - 30 - (punto.documentos / maximo) * (alto - 60) }))
-  return <svg viewBox={`0 0 ${ancho} ${alto}`} role="img" aria-label="Tendencia de documentos por fecha" className="stats-chart"><line x1="30" y1={alto - 30} x2={ancho - 30} y2={alto - 30} stroke="var(--color-borde)" /><polyline points={puntosSvg.map((punto) => `${punto.x},${punto.y}`).join(' ')} fill="none" stroke="var(--color-institucional)" strokeWidth="3" />{puntosSvg.map((punto) => <g key={punto.fecha}><circle cx={punto.x} cy={punto.y} r="5" fill="var(--color-institucional)" /><text x={punto.x} y={punto.y - 10} textAnchor="middle" fontSize="12">{punto.documentos}</text><text x={punto.x} y={alto - 8} textAnchor="middle" fontSize="10">{punto.fecha}</text></g>)}</svg>
+  const intervaloEtiqueta = Math.max(1, Math.ceil(puntos.length / 12))
+  const puntosSvg = puntos.map((punto, indice) => ({
+    ...punto,
+    x: puntos.length === 1 ? ancho / 2 : 40 + (indice * (ancho - 80)) / (puntos.length - 1),
+    y: alto - 30 - (punto.documentos / maximo) * (alto - 60),
+    mostrarEtiqueta: indice % intervaloEtiqueta === 0 || indice === puntos.length - 1,
+  }))
+  return (
+    <div className="stats-chart-scroll" role="region" aria-label="Tendencia en el tiempo; desplázate horizontalmente para recorrer todos los puntos" tabIndex={0}>
+      <svg
+        viewBox={`0 0 ${ancho} ${alto}`}
+        role="img"
+        aria-label="Tendencia de documentos por fecha"
+        className="stats-chart"
+        style={{ width: `${ancho}px`, height: `${alto}px` }}
+      >
+        <line x1="40" y1={alto - 30} x2={ancho - 40} y2={alto - 30} stroke="var(--color-borde)" />
+        <polyline points={puntosSvg.map((punto) => `${punto.x},${punto.y}`).join(' ')} fill="none" stroke="var(--color-institucional)" strokeWidth="3" />
+        {puntosSvg.map((punto) => (
+          <g key={punto.fecha}>
+            <title>{`${punto.fecha}: ${punto.documentos} documentos en ${punto.eventos} eventos`}</title>
+            <circle cx={punto.x} cy={punto.y} r="5" fill="var(--color-institucional)" />
+            {punto.mostrarEtiqueta && (
+              <>
+                <text x={punto.x} y={punto.y - 10} textAnchor="middle" fontSize="12">{punto.documentos}</text>
+                <text x={punto.x} y={alto - 8} textAnchor="middle" fontSize="10">{etiquetaFecha(punto.fecha)}</text>
+              </>
+            )}
+          </g>
+        ))}
+      </svg>
+    </div>
+  )
 }

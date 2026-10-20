@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { generarTextoConstancia } from './generarTextoConstancia'
+import { generarTextoConstancia, ROLES_RECONOCIDOS } from './generarTextoConstancia'
 
 const datosBase = {
   participaComo: 'Organizador',
@@ -11,9 +11,38 @@ const datosBase = {
 }
 
 describe('generarTextoConstancia', () => {
+  it('define Participante con la redacción confirmada', () => {
+    expect(
+      generarTextoConstancia({
+        ...datosBase,
+        participaComo: 'Participante',
+        nombreEvento: 'Congreso 2026',
+        articuloEvento: 'del',
+      }).textoGenerado,
+    ).toBe('Por su participación del Congreso 2026, en la Facultad de Ciencias de la Computación.')
+  })
+
+  it.each([
+    ['Ganadora', 'Por ser mejor proyecto en el Congreso 2026'],
+    ['Ganadores', 'Por ser mejor proyecto en el Congreso 2026'],
+    ['Ganadoras', 'Por ser mejor proyecto en el Congreso 2026'],
+    ['Jurados', 'Por participar como jurados en el Congreso 2026'],
+    ['Asistentes', 'Por asistir en el Congreso 2026'],
+    ['Moderador', 'Por participar como moderador en el Congreso 2026'],
+  ])('reconoce y genera el rol variante %s', (participaComo, textoEsperado) => {
+    expect(ROLES_RECONOCIDOS).toContain(participaComo.toLocaleUpperCase('es-MX'))
+    expect(
+      generarTextoConstancia({
+        ...datosBase,
+        participaComo,
+        nombrePonencia: 'mejor proyecto',
+      }).textoGenerado,
+    ).toContain(textoEsperado)
+  })
+
   it('conserva la sede normal para participantes BUAP', () => {
     expect(generarTextoConstancia(datosBase).textoGenerado).toBe(
-      'Por haber participado como Organizador, del Congreso 2026, en la Facultad de Ciencias de la Computación.',
+      'Por ser Organizador, del Congreso 2026, en la Facultad de Ciencias de la Computación.',
     )
   })
 
@@ -27,7 +56,7 @@ describe('generarTextoConstancia', () => {
         }),
       ).toEqual({
         textoGenerado:
-            'Por haber participado como Organizador, del Congreso 2026, en la Facultad de Ciencias de la Computación.',
+            'Por ser Organizador, del Congreso 2026, en la Facultad de Ciencias de la Computación.',
         esPersonalizado: false,
         universidadExterna: null,
       })
@@ -80,7 +109,7 @@ describe('generarTextoConstancia', () => {
           nombreEvento: '5.º Taller de Experiencias',
           articuloEvento: 'de la',
         }).textoGenerado,
-      ).toContain('en la organización de la 5.º Taller de Experiencias,')
+      ).toContain(', de la 5.º Taller de Experiencias,')
       expect(
         generarTextoConstancia({
           ...datosBase,
@@ -95,7 +124,7 @@ describe('generarTextoConstancia', () => {
           participaComo: 'Colaborador',
           nombreEvento: '5.º Taller de Experiencias',
         }).textoGenerado,
-      ).toContain('en la organización del 5.º Taller de Experiencias,')
+      ).toContain('Por su participación como Colaborador, del 5.º Taller de Experiencias,')
     })
 
     it('usa en el/en la para las demás plantillas, usando la forma elegida o inferida', () => {

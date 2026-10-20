@@ -170,10 +170,6 @@ export default function EditorConfiguracion({ onVolver, onAbrirFolios }: Props) 
     }
   }
 
-  function mostrarMensajeVistaPrevia(nombre: string): void {
-    setMensaje(`${nombre}: genera primero un lote para habilitar su contenido.`)
-  }
-
   if (cargando) return <p>Cargando configuración administrativa...</p>
   if (!sello || !firmantes || !reglas) return <p>No se pudo cargar la configuración administrativa.</p>
 
@@ -250,7 +246,16 @@ export default function EditorConfiguracion({ onVolver, onAbrirFolios }: Props) 
           </Card>
         </main>
 
-        <aside className="editor-actions"><Card className="action-card"><Button type="button" onClick={() => void guardarCambios()} disabled={guardando}>{guardando ? 'Guardando...' : 'Guardar cambios'}</Button><div className="preview-actions"><Button variant="secondary" type="button" onClick={() => mostrarMensajeVistaPrevia('Vista previa de constancia regular')}>Vista previa de constancia regular</Button><Button variant="secondary" type="button" onClick={() => mostrarMensajeVistaPrevia('Vista previa de reconocimiento graduación')}>Vista previa de reconocimiento graduación</Button><Button variant="text" type="button" onClick={onAbrirFolios}>Catálogo de folios (ver y editar)</Button></div></Card></aside>
+        <aside className="editor-actions">
+          <Card className="action-card">
+            <Button type="button" onClick={() => void guardarCambios()} disabled={guardando}>
+              {guardando ? 'Guardando...' : 'Guardar cambios'}
+            </Button>
+            <Button variant="text" type="button" onClick={onAbrirFolios}>
+              Catálogo de folios (ver y editar)
+            </Button>
+          </Card>
+        </aside>
       </div>
     </div>
   )

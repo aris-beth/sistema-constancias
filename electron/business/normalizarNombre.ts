@@ -3,6 +3,7 @@ import { separarParticipantes } from './separarParticipantes'
 import type { ResultadoNormalizacion } from '../../shared/types/normalizacion'
 
 const MAXIMO_TOKENS_CONFIANZA_ALTA = 5
+const CONECTOR_AMBIGUO = /\b(?:de(?:\s+(?:la|los|las))?|del|y)\b/i
 
 function separarAbreviaturasPegadas(texto: string): string {
   return texto.replace(/([A-Za-zÀ-ÿ]{2,})\.(?=[A-Za-zÀ-ÿ])/g, '$1. ')
@@ -108,7 +109,8 @@ function normalizarPersona(
   const confianza: ResultadoNormalizacion['confianza'] =
     gradoAmbiguo ||
     tokens.length < 2 ||
-    tokens.length > MAXIMO_TOKENS_CONFIANZA_ALTA
+    tokens.length > MAXIMO_TOKENS_CONFIANZA_ALTA ||
+    CONECTOR_AMBIGUO.test(nombreOriginal)
       ? 'baja'
       : 'alta'
 
@@ -170,6 +172,10 @@ export function normalizarNombre(
   return {
     nombreNormalizado,
     gradoDetectado: gradosDetectados.length > 0 ? gradosDetectados[0] : null,
-    confianza: resultados.every((resultado) => resultado.confianza === 'alta') ? 'alta' : 'baja',
+    confianza:
+      resultados.every((resultado) => resultado.confianza === 'alta') &&
+      !CONECTOR_AMBIGUO.test(nombreOriginal)
+        ? 'alta'
+        : 'baja',
   }
 }

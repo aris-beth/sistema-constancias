@@ -4,7 +4,6 @@ import { leerArchivoExcel } from '../excel/lectorExcel'
 import { normalizarNombre } from '../business/normalizarNombre'
 import { construirMapaAbreviaturas } from '../business/catalogos/abreviaturasAcademicas'
 import { listarAbreviaturas } from '../db/repositories/abreviaturaAcademica.repository'
-import { listarRoles } from '../db/repositories/rol.repository'
 import {
   formatearFechaConstancia,
   validarFilaExcel,
@@ -86,16 +85,15 @@ function procesarFila(
   }
 }
 
-/** Catálogos vigentes (abreviaturas y roles guardados + los del código). */
-function obtenerContextoRegular(): { catalogo: Map<string, string>; roles: Set<string> } {
+/** Abreviaturas vigentes para normalizar los nombres de participantes. */
+function obtenerContextoRegular(): { catalogo: Map<string, string> } {
   const catalogo = construirMapaAbreviaturas(
     listarAbreviaturas().map((entrada) => ({
       formaEncontrada: entrada.formaEncontrada,
       abreviaturaAceptada: entrada.abreviaturaAceptada,
     })),
   )
-  const roles = new Set([...ROLES_RECONOCIDOS, ...listarRoles().map((rol) => rol.nombreRol)])
-  return { catalogo, roles }
+  return { catalogo }
 }
 
 /**
@@ -118,18 +116,17 @@ export function registrarManejadoresExcel(): void {
     const rutaArchivo = resultadoDialogo.filePaths[0]
     const filasCrudas = leerArchivoExcel(rutaArchivo)
 
-    // Combina el catálogo base (código) con lo que ya exista guardado en
-    // la base de datos (entradas que alguien haya agregado desde la
-    // interfaz más adelante), para que el normalizador use ambos.
+    // Las abreviaturas guardadas complementan el catálogo base. Los roles
+    // reconocidos se derivan de las plantillas que el generador puede usar.
     const entradasGuardadas = listarAbreviaturas().map((entrada) => ({
       formaEncontrada: entrada.formaEncontrada,
       abreviaturaAceptada: entrada.abreviaturaAceptada,
     }))
     const catalogo = construirMapaAbreviaturas(entradasGuardadas)
 
-    const rolesGuardados = listarRoles().map((rol) => rol.nombreRol)
-    const rolesReconocidos = new Set([...ROLES_RECONOCIDOS, ...rolesGuardados])
-    const filas = filasCrudas.map((filaCruda) => procesarFila(filaCruda, catalogo, rolesReconocidos))
+    const filas = filasCrudas.map((filaCruda) =>
+      procesarFila(filaCruda, catalogo, ROLES_RECONOCIDOS),
+    )
 
     return {
       nombreArchivo: path.basename(rutaArchivo),
@@ -141,7 +138,7 @@ export function registrarManejadoresExcel(): void {
   // las corrigió en pantalla ("Actualizar cambios").
   ipcMain.handle('excel:revalidar', (_evento, filas: FilaExcelCruda[]): FilaProcesada[] => {
     if (!Array.isArray(filas)) throw new Error('La solicitud de revalidación no es válida.')
-    const { catalogo, roles } = obtenerContextoRegular()
-    return filas.map((fila) => procesarFila(fila, catalogo, roles))
+    const { catalogo } = obtenerContextoRegular()
+    return filas.map((fila) => procesarFila(fila, catalogo, ROLES_RECONOCIDOS))
   })
 }

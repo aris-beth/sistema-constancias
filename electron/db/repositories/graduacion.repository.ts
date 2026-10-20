@@ -17,16 +17,37 @@ export function guardarLoteGraduacion(
   const nombreEvento = `Reconocimientos de graduación ${primera.generacion}`
   const db = obtenerBaseDeDatos()
   const folio = folioSolicitado?.trim() || generarFolioAutomatico(nombreEvento, primera.fecha)
-  if (db.prepare('SELECT id FROM evento WHERE folio = ?').get(folio)) {
-    throw new Error(`Ya existe un evento registrado con el folio "${folio}".`)
-  }
 
   const transaccion = db.transaction(() => {
-    const evento = db.prepare(
-      `INSERT INTO evento (folio, nombre_evento, fecha_constancia, modalidad, tipo_plantilla, generacion, carrera)
-       VALUES (?, ?, ?, 'Otro', 'graduacion', ?, ?)`,
-    ).run(folio, nombreEvento, primera.fecha, primera.generacion, primera.carrera)
-    const eventoId = Number(evento.lastInsertRowid)
+    const eventoExistente = db
+      .prepare('SELECT id, tipo_plantilla FROM evento WHERE folio = ?')
+      .get(folio) as { id: number; tipo_plantilla: string } | undefined
+    let eventoId: number
+
+    if (eventoExistente) {
+      if (eventoExistente.tipo_plantilla !== 'graduacion') {
+        throw new Error(`El folio "${folio}" pertenece a un evento regular.`)
+      }
+      eventoId = eventoExistente.id
+      db.prepare(
+        `UPDATE evento
+         SET nombre_evento = ?, fecha_constancia = ?, modalidad = 'Otro',
+             generacion = ?, carrera = ?
+         WHERE id = ?`,
+      ).run(nombreEvento, primera.fecha, primera.generacion, primera.carrera, eventoId)
+      db.prepare(
+        `DELETE FROM constancia_participante
+         WHERE constancia_id IN (SELECT id FROM constancia WHERE evento_id = ?)`,
+      ).run(eventoId)
+      db.prepare('DELETE FROM constancia WHERE evento_id = ?').run(eventoId)
+    } else {
+      const evento = db.prepare(
+        `INSERT INTO evento (folio, nombre_evento, fecha_constancia, modalidad, tipo_plantilla, generacion, carrera)
+         VALUES (?, ?, ?, 'Otro', 'graduacion', ?, ?)`,
+      ).run(folio, nombreEvento, primera.fecha, primera.generacion, primera.carrera)
+      eventoId = Number(evento.lastInsertRowid)
+    }
+
     const roles = new Map<string, number>()
     const obtenerRol = db.prepare('SELECT id FROM rol WHERE nombre_rol = ?')
     const insertarRol = db.prepare('INSERT INTO rol (nombre_rol, plantilla_texto) VALUES (?, ?)')

@@ -319,7 +319,7 @@ const App: React.FC = () => {
             });
         return guardado.folioEvento;
       };
-      if (folioPersistido === null || (modoConstancia === 'regular' && folioPersistido !== folio)) {
+      if (folioPersistido === null || folioPersistido !== folio) {
         folio = await guardarLote();
         setFolioPersistido(folio);
         setFolioEvento(folio); // refleja en pantalla el folio autogenerado

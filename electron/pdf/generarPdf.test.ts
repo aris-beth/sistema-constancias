@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { crearHtmlDocumento, crearPaginaGraduacion, crearPaginaRegular, type DatosDocumentoPdf } from './generarPdf'
+import {
+  crearHtmlDocumento,
+  crearPaginaGraduacion,
+  crearPaginaRegular,
+  nombreCarpetaEvento,
+  type DatosDocumentoPdf,
+} from './generarPdf'
 import type { Evento } from '../../shared/types/evento'
 
 const sello = {
@@ -46,6 +52,21 @@ function documento(overrides: Partial<DatosDocumentoPdf> = {}): DatosDocumentoPd
 }
 
 describe('generarPdf', () => {
+  it('sanitiza folios históricos al construir el nombre de carpeta del evento', () => {
+    const nombre = nombreCarpetaEvento({
+      folio: '2020/05:15',
+      nombreEvento: 'Congreso: pasado/actual',
+    })
+
+    expect(nombre).toContain('2020_05_15_')
+    expect(nombre).toContain('_Congreso_pasado_actual')
+    expect(nombre).not.toMatch(/[\\/:*?"<>|]/)
+    expect(nombreCarpetaEvento({
+      folio: '2020:05/15',
+      nombreEvento: 'Congreso: pasado/actual',
+    })).not.toBe(nombre)
+  })
+
   it('aplica autoajuste y saltos de línea a un nombre de 168 caracteres', () => {
     const html = crearPaginaRegular(documento({ nombre: textoDeLongitud(168) }), sello, evento)
 

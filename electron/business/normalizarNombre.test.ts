@@ -67,7 +67,7 @@ describe('normalizarNombre', () => {
     )
 
     expect(resultado.nombreNormalizado).toBe('PEREZ JUAN Y LOPEZ ANA')
-    expect(resultado.confianza).toBe('alta')
+    expect(resultado.confianza).toBe('baja')
   })
 
   it('conserva comas y "y" y normaliza todos los nombres de la lista', () => {
@@ -79,7 +79,22 @@ describe('normalizarNombre', () => {
     expect(resultado.nombreNormalizado).toBe(
       'DRA. ETCHEVERRY DOGER ERIKA BEATRIZ, DRA. ANTON SARABIA JENNIFER Y DRA. TEUTLI MELLADO KARLA MARISOL',
     )
-    expect(resultado.confianza).toBe('alta')
+    expect(resultado.confianza).toBe('baja')
+  })
+
+  it.each([
+    'JUAN DE PEREZ',
+    'JUAN DE LA TORRE',
+    'JUAN DEL TORO',
+    'JUAN DE LOS SANTOS',
+    'JUAN DE LAS NIEVES',
+    'JUAN PEREZ Y ANA LOPEZ',
+  ])('marca baja confianza cuando el nombre contiene el conector ambiguo de %s', (entrada) => {
+    expect(normalizarNombre(entrada, catalogo).confianza).toBe('baja')
+  })
+
+  it('no marca baja confianza por sílabas que solo contienen esos conectores', () => {
+    expect(normalizarNombre('Juan Delgado Perez', catalogo).confianza).toBe('alta')
   })
 
   it('reemplaza guiones entre partes del nombre por espacios antes de normalizar', () => {

@@ -901,7 +901,8 @@ body {
 .comparison-results > div { display: grid; gap: 4px; padding: 16px; border-left: 3px solid var(--color-institucional); background: var(--color-institucional-light); }
 .comparison-results strong { color: var(--color-institucional); font-size: 2rem; }
 .comparison-results small { color: var(--color-texto-secundario); }
-.stats-chart { width: 100%; max-height: 280px; }
+.stats-chart-scroll { width: 100%; overflow-x: auto; overscroll-behavior-x: contain; }
+.stats-chart { display: block; max-width: none; max-height: 280px; }
 
 @media (max-width: 900px) {
   .stats-kpis, .stats-columns, .comparison-inputs .stats-filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }

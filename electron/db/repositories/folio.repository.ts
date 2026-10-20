@@ -69,11 +69,20 @@ function obtenerPorId(id: number): FolioCatalogoEntry | null {
   return fila ? mapearFila(fila, 'catalogo') : null
 }
 
+function validarFolioCatalogo(folio: string): void {
+  if (!folio) throw new Error('El folio no puede estar vacío.')
+  if (/[\u0000-\u001f\u007f<>"|?*\\]/.test(folio)) {
+    throw new Error(
+      'El folio contiene caracteres no permitidos. Para folios históricos se permiten "/" y ":"; ambos se sanitizan al generar la carpeta.',
+    )
+  }
+}
+
 /** Registra un folio ya existente; si ya estaba en el catálogo, actualiza su referencia. */
 export function registrarFolioCatalogo(datos: FolioCatalogoEntryNuevo): FolioCatalogoEntry {
-  const db = obtenerBaseDeDatos()
   const folio = datos.folio.trim()
-  if (!folio) throw new Error('El folio no puede estar vacío.')
+  validarFolioCatalogo(folio)
+  const db = obtenerBaseDeDatos()
   if (db.prepare('SELECT id FROM evento WHERE folio = ?').get(folio)) {
     throw new Error(`El folio "${folio}" ya pertenece a un evento guardado en el sistema.`)
   }
@@ -95,9 +104,9 @@ export function registrarFolioCatalogo(datos: FolioCatalogoEntryNuevo): FolioCat
 
 /** Edita el texto y la referencia de un folio del catálogo. */
 export function actualizarFolioCatalogo(id: number, datos: FolioCatalogoEntryNuevo): FolioCatalogoEntry {
-  const db = obtenerBaseDeDatos()
   const folio = datos.folio.trim()
-  if (!folio) throw new Error('El folio no puede estar vacío.')
+  validarFolioCatalogo(folio)
+  const db = obtenerBaseDeDatos()
   if (db.prepare('SELECT id FROM evento WHERE folio = ?').get(folio)) {
     throw new Error(`El folio "${folio}" ya pertenece a un evento guardado en el sistema.`)
   }

@@ -12,6 +12,11 @@
     "test": "vitest run",
     "package:win": "npm run build && electron-builder --win"
   },
+  "build": {
+    "directories": {
+      "output": "release"
+    }
+  },
   "dependencies": {
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

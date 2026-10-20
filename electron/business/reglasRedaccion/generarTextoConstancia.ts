@@ -25,21 +25,15 @@ export interface ResultadoTextoConstancia {
   universidadExterna: string | null
 }
 
-/**
- * Organizadores y colaboradores conservan la forma tradicional {DEL_EVENTO}
- * ("del Congreso", "de la Jornada"). El resto de las plantillas usa
- * {EN_EVENTO} ("en el Congreso", "en la Jornada"), sin insertar "el evento".
- *
- * Marcadores de las plantillas:
- * - {EVENTO}: el nombre del evento tal cual.
- * - {DEL_EVENTO}: artículo + nombre ("del 5.º Taller…", "de la 3.ª Jornada…").
- */
 const PLANTILLAS_POR_ROL: Record<string, string> = {
+  PARTICIPANTE: 'Por su participación {DEL_EVENTO}, {SEDE}.',
+  PARTICIPANTES: 'Por su participación {DEL_EVENTO}, {SEDE}.',
   ORGANIZADOR: 'Por ser {PARTICIPA_COMO}, {DEL_EVENTO}, {SEDE}.',
   ORGANIZADORA: 'Por ser {PARTICIPA_COMO}, {DEL_EVENTO}, {SEDE}.',
   COLABORADOR: 'Por su participación como {PARTICIPA_COMO}, {DEL_EVENTO}, {SEDE}.',
   COLABORADORA: 'Por su participación como {PARTICIPA_COMO}, {DEL_EVENTO}, {SEDE}.',
   ASISTENTE: 'Por asistir {EN_EVENTO}, {SEDE}.',
+  ASISTENTES: 'Por asistir {EN_EVENTO}, {SEDE}.',
   'PONENTE CONFERENCIA':
     'Por presentar la conferencia magistral “{PONENCIA}”, {EN_EVENTO}, {SEDE}.',
   'PONENTES CONFERENCIA':
@@ -48,36 +42,26 @@ const PLANTILLAS_POR_ROL: Record<string, string> = {
   PONENTES: 'Por haber impartido la ponencia “{PONENCIA}” {EN_EVENTO}, {SEDE}.',
   // Vigente por decisión del cliente: el texto es fijo ("jurado"), NO usa el valor real de la columna PARTICIPA COMO, a diferencia de lo que indica el documento de requerimientos (tabla 3, sección 5.1). Confirmado — no modificar sin autorización.
   JURADO: 'Por participar como jurado {EN_EVENTO}, {SEDE}.',
+  JURADOS: 'Por participar como jurados {EN_EVENTO}, {SEDE}.',
+  MODERADOR: 'Por participar como moderador {EN_EVENTO}, {SEDE}.',
+  MODERADORA: 'Por participar como moderadora {EN_EVENTO}, {SEDE}.',
+  MODERADORES: 'Por participar como moderadores {EN_EVENTO}, {SEDE}.',
+  MODERADORAS: 'Por participar como moderadoras {EN_EVENTO}, {SEDE}.',
   'MODERADOR DE PANEL':
     'Por participar como moderador de panel, {EN_EVENTO}, {SEDE}.',
   'MODERADORA DE PANEL':
     'Por participar como moderadora de panel, {EN_EVENTO}, {SEDE}.',
   // Vigente por decisión del cliente: {PONENCIA} es la descripción libre de lo obtenido, no un "lugar", a diferencia de la redacción del documento de requerimientos (tabla 3, sección 5.1). Confirmado — no modificar sin autorización.
   GANADOR: 'Por ser {PONENCIA} {EN_EVENTO}, {SEDE}.',
+  GANADORA: 'Por ser {PONENCIA} {EN_EVENTO}, {SEDE}.',
+  GANADORES: 'Por ser {PONENCIA} {EN_EVENTO}, {SEDE}.',
+  GANADORAS: 'Por ser {PONENCIA} {EN_EVENTO}, {SEDE}.',
   'REVISOR DE LIBRO': 'Por participar como {PARTICIPA_COMO} {PONENCIA}, emanado {DEL_EVENTO}, {SEDE}.',
   'REVISORA DE LIBRO': 'Por participar como {PARTICIPA_COMO} {PONENCIA}, emanado {DEL_EVENTO}, {SEDE}.',
   'COMITE REVISOR': 'Por participar como integrante del comité revisor, {EN_EVENTO}, {SEDE}.',
 }
 
-export const ROLES_RECONOCIDOS = [
-  'Participante',
-  'Organizador',
-  'Organizadora',
-  'Colaborador',
-  'Colaboradora',
-  'Asistente',
-  'Ponente conferencia',
-  'Ponentes conferencia',
-  'Ponente',
-  'Ponentes',
-  'Jurado',
-  'Moderador de panel',
-  'Moderadora de panel',
-  'Ganador',
-  'Revisor de libro',
-  'Revisora de libro',
-  'Comité revisor',
-]
+export const ROLES_RECONOCIDOS = Object.keys(PLANTILLAS_POR_ROL)
 
 const SEDES_POR_MODALIDAD: Record<string, string> = {
   'PRESENCIAL CU': 'en la Facultad de Ciencias de la Computación',
