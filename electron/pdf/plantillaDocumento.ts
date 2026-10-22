@@ -366,10 +366,10 @@ export function crearHtmlDocumento(
          normal (no con posición fija en la página) para que nunca se monte
          sobre el cuerpo del texto cuando este ocupa varias líneas. */
       .sello-bloque { position: relative; flex: 0 0 auto; width: 3.93in; height: 2.2in; margin-top: 0.22in; }
-      .sello-texto { position: absolute; left: 0; top: 0.17in; width: 100%; text-align: center; }
+      .sello-texto { position: absolute; left: 0; top: 0.17in; width: 100%; text-align: center; z-index: 1; }
       .sello-texto .lema { font-size: 12pt; font-weight: 700; line-height: 1.45; }
       .sello-texto .fecha { font-size: 12pt; line-height: 1.45; }
-      .sello-img { position: absolute; left: 50%; top: 0; transform: translateX(-50%); width: 8.5cm; height: 5.5cm; background-repeat: no-repeat; background-position: center; background-size: contain; }
+      .sello-img { position: absolute; left: 50%; top: 0; transform: translateX(-50%); width: 8.5cm; height: 5.5cm; background-repeat: no-repeat; background-position: center; background-size: contain; z-index: 0; }
       .sello-firmante { position: absolute; left: 0; top: 1.62in; width: 100%; text-align: center; font-size: 12pt; line-height: 1.3; }
       .sello-firmante strong { font-weight: 700; display: block; }
 

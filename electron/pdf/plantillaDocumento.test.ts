@@ -245,7 +245,18 @@ describe('plantillaDocumento', () => {
     )
 
     expect(html).toContain(
-      '.sello-img { position: absolute; left: 50%; top: 0; transform: translateX(-50%); width: 8.5cm; height: 5.5cm; background-repeat: no-repeat; background-position: center; background-size: contain; }',
+      '.sello-img { position: absolute; left: 50%; top: 0; transform: translateX(-50%); width: 8.5cm; height: 5.5cm; background-repeat: no-repeat; background-position: center; background-size: contain; z-index: 0; }',
     )
+  })
+
+  it('mantiene el lema y la fecha por encima de la imagen del sello', () => {
+    const html = crearHtmlDocumento(
+      [crearPaginaRegular(documento(), sello, { ...RECURSOS_VACIOS, selloSinFirma: 'data:image/png;base64,CCCC' })],
+      { ...RECURSOS_VACIOS, selloSinFirma: 'data:image/png;base64,CCCC' },
+    )
+
+    expect(html).toContain('.sello-texto { position: absolute; left: 0; top: 0.17in; width: 100%; text-align: center; z-index: 1; }')
+    expect(html).toContain('.sello-img { position: absolute; left: 50%; top: 0; transform: translateX(-50%); width: 8.5cm; height: 5.5cm; background-repeat: no-repeat; background-position: center; background-size: contain; z-index: 0; }')
+    expect(html).toContain('<div class="fecha">Puebla de Z., a 22 de septiembre de 2026</div>')
   })
 })
