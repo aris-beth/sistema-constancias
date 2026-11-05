@@ -64,7 +64,7 @@ describe('procesarFilaExcel', () => {
     expect(resultado.textoGenerado).toBeTruthy()
   })
 
-  it('normaliza cada nombre de la fila cuando los participantes están unidos por "y"', () => {
+  it('conserva el orden de cada nombre cuando los participantes están unidos por "y"', () => {
     const resultado = procesarFilaExcel(
       {
         ...filaBase,
@@ -78,8 +78,8 @@ describe('procesarFilaExcel', () => {
 
     expect(resultado.error).toBeNull()
     expect(resultado.participantes.map((participante) => participante.nombreNormalizado)).toEqual([
-      'PEREZ JUAN',
-      'LOPEZ ANA',
+      'JUAN PEREZ',
+      'ANA LOPEZ',
     ])
   })
 })

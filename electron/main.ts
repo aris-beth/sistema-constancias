@@ -12,6 +12,7 @@ import { registrarManejadorGenerarPdfs } from './ipc/pdf.handlers'
 import { registrarManejadoresEvento } from './ipc/evento.handlers'
 import { registrarManejadoresConfiguracion } from './ipc/configuracion.handlers'
 import { registrarManejadorEstadisticas } from './ipc/estadisticas.handlers'
+import { registrarManejadoresCorrecciones } from './ipc/correcciones.handlers'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -78,6 +79,7 @@ app.whenReady().then(() => {
   registrarManejadoresEvento()
   registrarManejadoresConfiguracion()
   registrarManejadorEstadisticas()
+  registrarManejadoresCorrecciones()
 
   crearVentanaPrincipal()
 

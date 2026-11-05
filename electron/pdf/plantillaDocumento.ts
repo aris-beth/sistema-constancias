@@ -1,4 +1,5 @@
 import { esUniversidadBUAP } from '../business/instituciones'
+import { formatearNombreGraduacion } from '../business/formatearNombreGraduacion'
 
 /**
  * Plantillas HTML/CSS de los documentos (sección 7 del TDD: "Diseño de
@@ -89,23 +90,7 @@ export function formatearFechaParaDocumento(fecha: string): string {
  * mayúsculas o todo en minúsculas se pasa a formato título; si ya trae
  * mayúsculas y minúsculas mezcladas se respeta tal cual.
  */
-export function formatearNombreGraduacion(nombre: string): string {
-  const limpio = nombre.trim().replace(/\s+/g, ' ')
-  const soloMayusculas = limpio === limpio.toLocaleUpperCase('es-MX')
-  const soloMinusculas = limpio === limpio.toLocaleLowerCase('es-MX')
-  if (!soloMayusculas && !soloMinusculas) return limpio
-
-  const particulas = new Set(['de', 'del', 'la', 'las', 'los', 'y', 'e'])
-  return limpio
-    .toLocaleLowerCase('es-MX')
-    .split(' ')
-    .map((palabra, indice) =>
-      indice > 0 && particulas.has(palabra)
-        ? palabra
-        : palabra.charAt(0).toLocaleUpperCase('es-MX') + palabra.slice(1),
-    )
-    .join(' ')
-}
+export { formatearNombreGraduacion }
 
 /**
  * La línea de institución solo se imprime para participantes externos
@@ -305,20 +290,33 @@ export function crearHtmlDocumento(
     ? `html,body{overflow:hidden;background:#fff}
       .visor{position:absolute;left:0;top:0;width:11in;height:8.5in;transform-origin:0 0}`
     : ''
+  const inicializacionDocumento = `
+    (async function () {
+      await document.fonts.ready;
+      var subtitulo = document.querySelector('.encabezado-inst .subtitulo:not(.otorga)');
+      if (subtitulo) {
+        var rango = document.createRange();
+        rango.selectNodeContents(subtitulo);
+        var anchoSubtitulo = rango.getBoundingClientRect().width;
+        document.querySelectorAll('.destinatario').forEach(function (destinatario) {
+          destinatario.style.maxWidth = anchoSubtitulo + 'px';
+        });
+      }
+      ${previsualizacion ? `
+        function ajustar() {
+          var visor = document.querySelector('.visor');
+          if (!visor) return;
+          var escala = Math.min(window.innerWidth / 1056, window.innerHeight / 816);
+          visor.style.transform = 'scale(' + escala + ')';
+        }
+        window.addEventListener('resize', ajustar);
+        ajustar();
+      ` : ''}
+    })();
+  `
   const cuerpo = previsualizacion
     ? `<div class="visor">${paginas.join('')}</div>
-      <script>
-        (function () {
-          function ajustar() {
-            var visor = document.querySelector('.visor');
-            if (!visor) return;
-            var escala = Math.min(window.innerWidth / 1056, window.innerHeight / 816);
-            visor.style.transform = 'scale(' + escala + ')';
-          }
-          window.addEventListener('resize', ajustar);
-          ajustar();
-        })();
-      </script>`
+      <script>${inicializacionDocumento}</script>`
     : paginas.join('')
 
   return `<!doctype html><html lang="es"><head><meta charset="utf-8" />
@@ -349,7 +347,7 @@ export function crearHtmlDocumento(
 
       .centro { flex: 1 1 auto; min-height: 0; width: 100%; display: flex; flex-direction: column; justify-content: flex-start; align-items: center; margin-top: 0.196in; }
       .bloque-texto { display: flex; flex-direction: column; align-items: center; width: 100%; }
-      .destinatario { font-size: 16pt; line-height: 1.2; max-width: 6.7in; overflow-wrap: anywhere; }
+      .destinatario { font-size: 16pt; line-height: 1.2; max-width: 100%; overflow-wrap: anywhere; }
       .destinatario .prefijo { font-weight: 700; }
       .destinatario strong { font-weight: 700; }
       .institucion { font-size: 13pt; margin-top: 0.06in; }
@@ -384,5 +382,5 @@ export function crearHtmlDocumento(
       ${reglaImagen('.logo', recursos.logo)}
       ${reglaImagen('.sello-img', elegirSelloParaDocumento(recursos).imagen)}
       ${estilosPreview}
-    </style></head><body>${cuerpo}</body></html>`
+    </style></head><body>${cuerpo}${previsualizacion ? '' : `<script>${inicializacionDocumento}</script>`}</body></html>`
 }

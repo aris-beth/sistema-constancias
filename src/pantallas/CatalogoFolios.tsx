@@ -4,6 +4,7 @@ import type { FolioCatalogoEntry } from '../../shared/types/configuracion'
 
 interface Props {
   onVolver: () => void
+  onCorregirEvento: (folio: string) => Promise<void>
 }
 
 interface Borrador {
@@ -37,7 +38,7 @@ function fechaLegible(valor: string): string {
   }).format(fecha)
 }
 
-export default function CatalogoFolios({ onVolver }: Props) {
+export default function CatalogoFolios({ onVolver, onCorregirEvento }: Props) {
   const [folios, setFolios] = useState<FolioCatalogoEntry[]>([])
   const [cargando, setCargando] = useState(true)
   const [ocupado, setOcupado] = useState(false)
@@ -47,6 +48,7 @@ export default function CatalogoFolios({ onVolver }: Props) {
   const [editandoClave, setEditandoClave] = useState<string | null>(null)
   const [borrador, setBorrador] = useState<Borrador>({ folio: '', nombreReferencia: '' })
   const [nuevo, setNuevo] = useState<Borrador>({ folio: '', nombreReferencia: '' })
+  const [abriendoCorrecciones, setAbriendoCorrecciones] = useState(false)
 
   useEffect(() => {
     void cargarFolios()
@@ -160,13 +162,26 @@ export default function CatalogoFolios({ onVolver }: Props) {
     }
   }
 
-  const formularioOcupado = ocupado || cargando
+  async function abrirCorrecciones(entrada: FolioCatalogoEntry): Promise<void> {
+    setError(null)
+    setMensaje(null)
+    setAbriendoCorrecciones(true)
+    try {
+      await onCorregirEvento(entrada.folio)
+    } catch (errorActual) {
+      mostrarError(errorActual)
+    } finally {
+      setAbriendoCorrecciones(false)
+    }
+  }
+
+  const formularioOcupado = ocupado || cargando || abriendoCorrecciones
 
   return (
     <div className="catalogo-page">
       <div className="catalogo-header">
         <div>
-          <Button variant="text" type="button" onClick={onVolver} disabled={ocupado}>← Regresar a edición de plantillas</Button>
+          <Button variant="text" type="button" onClick={onVolver} disabled={formularioOcupado}>← Regresar a edición de plantillas</Button>
           <p className="app-kicker">Catálogo</p>
           <h2>Catálogo de folios</h2>
           <p>Administra folios reservados: agrega, busca, corrige o elimina registros. Los folios nuevos de eventos se generan automáticamente.</p>
@@ -231,6 +246,16 @@ export default function CatalogoFolios({ onVolver }: Props) {
                     <td>{fechaLegible(entrada.fechaRegistro)}</td>
                     <td>
                       <div className="catalogo-row-actions">
+                        {entrada.origen === 'evento' && (
+                          <Button
+                            variant="secondary"
+                            type="button"
+                            onClick={() => void abrirCorrecciones(entrada)}
+                            disabled={formularioOcupado}
+                          >
+                            {abriendoCorrecciones ? 'Abriendo...' : 'Corregir constancias'}
+                          </Button>
+                        )}
                         <Button variant="secondary" type="button" onClick={() => empezarEdicion(entrada)} disabled={formularioOcupado}>Editar</Button>
                         <Button variant="text" type="button" onClick={() => void eliminar(entrada)} disabled={formularioOcupado}>Eliminar</Button>
                       </div>

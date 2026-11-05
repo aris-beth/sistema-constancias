@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS constancia (
   universidad_origen TEXT,
   fecha_generacion TEXT NOT NULL,
   folio_interno TEXT UNIQUE NOT NULL,
+  nombre_impreso TEXT,
   estado TEXT NOT NULL DEFAULT 'generada' CHECK (estado IN ('pendiente', 'generada'))
 );
 
@@ -49,6 +50,16 @@ CREATE TABLE IF NOT EXISTS constancia_participante (
   constancia_id INTEGER NOT NULL REFERENCES constancia(id),
   participante_id INTEGER NOT NULL REFERENCES participante(id),
   PRIMARY KEY (constancia_id, participante_id)
+);
+
+CREATE TABLE IF NOT EXISTS constancia_correccion (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  constancia_id INTEGER NOT NULL REFERENCES constancia(id) ON DELETE CASCADE,
+  nombre_anterior TEXT NOT NULL,
+  nombre_nuevo TEXT NOT NULL,
+  texto_anterior TEXT NOT NULL,
+  texto_nuevo TEXT NOT NULL,
+  fecha_correccion TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS abreviatura_academica (

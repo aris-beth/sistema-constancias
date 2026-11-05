@@ -4,7 +4,11 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import type { Evento } from '../../shared/types/evento'
 import type { ConfiguracionFirmantesGraduacion, ConfiguracionSello } from '../../shared/types/configuracion'
-import type { ErrorPdfRol, ResumenPdfRol } from '../../shared/types/ipc'
+import type {
+  ErrorPdfRol,
+  GenerarCorreccionesResultado,
+  ResumenPdfRol,
+} from '../../shared/types/ipc'
 import { autoajustarTexto } from '../business/autoajuste/autoajustarTexto'
 import {
   crearHtmlDocumento,
@@ -27,6 +31,11 @@ export interface ResultadoGeneracionPdfs {
   roles: ResumenPdfRol[]
   errores: ErrorPdfRol[]
   advertencias: string[]
+}
+
+export interface DocumentoCorreccionPdf extends DatosDocumentoPdf {
+  id: number
+  rol: string
 }
 
 /** Carpeta `resources/` (fuentes y logo). Dentro del asar también se puede leer con fs. */
@@ -160,4 +169,72 @@ export async function generarPdfsPorRol(
     }
   }
   return { carpetaEvento, roles, errores, advertencias }
+}
+
+export async function generarPdfsCorrecciones(
+  evento: Evento,
+  documentos: DocumentoCorreccionPdf[],
+  carpetaDestino: string,
+  sello: ConfiguracionSello,
+  firmantes: ConfiguracionFirmantesGraduacion,
+): Promise<GenerarCorreccionesResultado> {
+  if (!carpetaDestino.trim()) throw new Error('La carpeta de destino es obligatoria.')
+  if (documentos.length === 0) throw new Error('Selecciona al menos una constancia para generar.')
+
+  const carpetaCorrecciones = path.join(
+    carpetaDestino,
+    nombreCarpetaEvento(evento),
+    'Correcciones',
+  )
+  await fs.mkdir(carpetaCorrecciones, { recursive: true })
+  const esGraduacion = evento.tipoPlantilla === 'graduacion'
+  const { recursos, advertencias } = await armarRecursos(
+    carpetaResources(),
+    esGraduacion ? null : sello,
+  )
+  const rutas: string[] = []
+  const errores: Array<{ folioInterno: string; detalle: string }> = []
+  const paginas: Array<{ documento: DocumentoCorreccionPdf; html: string }> = []
+
+  for (const documento of documentos) {
+    try {
+      const html = esGraduacion
+        ? crearPaginaGraduacion(documento, firmantes)
+        : crearPaginaRegular(documento, sello, recursos)
+      paginas.push({ documento, html })
+    } catch (error) {
+      errores.push({
+        folioInterno: documento.folioInterno,
+        detalle: error instanceof Error ? error.message : String(error),
+      })
+    }
+  }
+
+  if (paginas.length > 0) {
+    try {
+      const { pdf, paginasDesbordadas } = await imprimirHtml(
+        crearHtmlDocumento(paginas.map((pagina) => pagina.html), recursos),
+      )
+      const ruta = path.join(carpetaCorrecciones, 'Correcciones.pdf')
+      await fs.writeFile(ruta, pdf)
+      rutas.push(ruta)
+      for (const indice of paginasDesbordadas) {
+        const pagina = paginas[indice]
+        if (!pagina) continue
+        advertencias.push(
+          `La corrección del folio interno "${pagina.documento.folioInterno}" ` +
+            `del rol "${pagina.documento.rol}" desborda el espacio disponible y podría aparecer recortada. ` +
+            'Revisa el PDF.',
+        )
+      }
+    } catch (error) {
+      const detalle = error instanceof Error ? error.message : String(error)
+      errores.push(...paginas.map(({ documento }) => ({
+        folioInterno: documento.folioInterno,
+        detalle,
+      })))
+    }
+  }
+
+  return { carpetaCorrecciones, rutas, errores, advertencias }
 }

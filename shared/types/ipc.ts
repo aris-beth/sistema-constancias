@@ -89,6 +89,39 @@ export interface GenerarPdfsResultado {
   advertencias: string[]
 }
 
+export interface ConstanciaCorreccion {
+  id: number
+  folioInterno: string
+  rol: string
+  tipoDocumento: 'constancia' | 'reconocimiento'
+  tipoPlantilla: TipoPlantilla
+  nombre: string
+  textoGenerado: string
+  ponencia: string | null
+  universidadOrigen: string | null
+  fechaConstancia: string
+}
+
+export interface GuardarCorreccionConstanciaEntrada {
+  folioEvento: string
+  constanciaId: number
+  nombre: string
+  textoGenerado: string
+}
+
+export interface GenerarCorreccionesEntrada {
+  folioEvento: string
+  constanciaIds: number[]
+  carpetaDestino?: string
+}
+
+export interface GenerarCorreccionesResultado {
+  carpetaCorrecciones: string
+  rutas: string[]
+  errores: Array<{ folioInterno: string; detalle: string }>
+  advertencias: string[]
+}
+
 export interface PrevisualizarEntrada {
   modo: 'regular' | 'graduacion'
   folioEvento: string

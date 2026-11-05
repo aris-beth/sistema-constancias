@@ -4,8 +4,14 @@ import { obtenerEventoPorFolio } from '../db/repositories/evento.repository'
 import { obtenerConfiguracionSello } from '../db/repositories/configuracionSello.repository'
 import { obtenerConfiguracionReglas } from '../db/repositories/configuracionReglas.repository'
 import { obtenerConfiguracionFirmantesGraduacion } from '../db/repositories/configuracionFirmantesGraduacion.repository'
+import { obtenerConstanciasParaPdfCorreccion } from '../db/repositories/correccion.repository'
 import { calcularEncabezadosPorFila } from '../business/calcularEncabezados'
-import { carpetaResources, generarPdfsPorRol, type GrupoPdf } from '../pdf/generarPdf'
+import {
+  carpetaResources,
+  generarPdfsCorrecciones,
+  generarPdfsPorRol,
+  type GrupoPdf,
+} from '../pdf/generarPdf'
 import {
   crearHtmlDocumento,
   crearPaginaGraduacion,
@@ -19,6 +25,8 @@ import { armarRecursos } from '../pdf/recursos'
 import type {
   GenerarPdfsEntrada,
   GenerarPdfsResultado,
+  GenerarCorreccionesEntrada,
+  GenerarCorreccionesResultado,
   PrevisualizarEntrada,
 } from '../../shared/types/ipc'
 
@@ -29,6 +37,7 @@ interface FilaPdf {
   nombre_normalizado: string
   nombre_original: string
   universidad_origen: string | null
+  nombre_impreso: string | null
   ponencia: string | null
   texto_generado: string
   fecha_constancia: string
@@ -101,6 +110,51 @@ async function generarPrevisualizacion(entrada: PrevisualizarEntrada): Promise<s
 export function registrarManejadorGenerarPdfs(): void {
   ipcMain.handle('pdf:seleccionarCarpeta', () => elegirCarpeta())
 
+  ipcMain.handle(
+    'pdf:generarCorrecciones',
+    async (_evento, entrada: GenerarCorreccionesEntrada): Promise<GenerarCorreccionesResultado> => {
+      if (!entrada || typeof entrada.folioEvento !== 'string') {
+        throw new Error('Los datos para generar las correcciones no son válidos.')
+      }
+      const folio = entrada.folioEvento.trim()
+      if (!folio) throw new Error('El folio del evento es obligatorio para generar correcciones.')
+      if (!Array.isArray(entrada.constanciaIds)) {
+        throw new Error('La selección de constancias para corregir no es válida.')
+      }
+      const evento = obtenerEventoPorFolio(folio)
+      if (!evento) throw new Error(`No se encontró un evento con el folio "${folio}".`)
+      const { documentos } = obtenerConstanciasParaPdfCorreccion(folio, entrada.constanciaIds)
+      const carpetaDestino = entrada.carpetaDestino?.trim() || (await elegirCarpeta())
+      if (!carpetaDestino) throw new Error('No se seleccionó una carpeta de destino.')
+      const esGraduacion = evento.tipoPlantilla === 'graduacion'
+      const documentosPdf = documentos.map((documento) => ({
+        id: documento.id,
+        rol: documento.rol,
+        folioInterno: documento.folioInterno,
+        encabezado: documento.tipoDocumento === 'reconocimiento' ? 'RECONOCIMIENTO' as const : 'CONSTANCIA' as const,
+        nombre: documento.nombre,
+        institucion: institucionParaDocumento(documento.universidadOrigen),
+        ponencia: documento.ponencia,
+        texto: documento.textoGenerado,
+        fecha: documento.fechaConstancia,
+        ...(esGraduacion ? opcionesCuerpoGraduacion(evento.generacion, evento.carrera) : {}),
+      }))
+      const sello = obtenerConfiguracionSello()
+      const resultado = await generarPdfsCorrecciones(
+        evento,
+        documentosPdf,
+        carpetaDestino,
+        sello,
+        obtenerConfiguracionFirmantesGraduacion(),
+      )
+      const advertencias = [...resultado.advertencias]
+      if (!esGraduacion && !sello.rutaSelloConFirma && !sello.personaFirmante?.trim()) {
+        advertencias.push('La configuración de firma no tiene persona firmante; revisa el Editor de plantillas.')
+      }
+      return { ...resultado, advertencias }
+    },
+  )
+
   ipcMain.handle('pdf:previsualizar', (_evento, entrada: PrevisualizarEntrada) =>
     generarPrevisualizacion(entrada),
   )
@@ -119,7 +173,8 @@ export function registrarManejadorGenerarPdfs(): void {
       const filas = obtenerBaseDeDatos()
         .prepare(
           `SELECT r.nombre_rol, c.folio_interno, c.tipo_documento, c.ponencia, c.texto_generado,
-             e.fecha_constancia, p.nombre_normalizado, p.nombre_original, c.universidad_origen
+             e.fecha_constancia, p.nombre_normalizado, p.nombre_original, c.universidad_origen,
+             c.nombre_impreso
            FROM constancia c
            JOIN rol r ON r.id = c.rol_id
            JOIN evento e ON e.id = c.evento_id
@@ -135,7 +190,9 @@ export function registrarManejadorGenerarPdfs(): void {
       const gruposMap = new Map<string, GrupoPdf>()
       for (const fila of filas) {
         const grupo = gruposMap.get(fila.nombre_rol) ?? { nombreRol: fila.nombre_rol, documentos: [] }
-        const nombre = esGraduacion ? formatearNombreGraduacion(fila.nombre_original) : fila.nombre_normalizado
+        const nombre = fila.nombre_impreso ?? (
+          esGraduacion ? formatearNombreGraduacion(fila.nombre_original) : fila.nombre_normalizado
+        )
         const documento = grupo.documentos.find((item) => item.folioInterno === fila.folio_interno)
         if (!documento) {
           grupo.documentos.push({
@@ -148,7 +205,7 @@ export function registrarManejadorGenerarPdfs(): void {
             fecha: fila.fecha_constancia,
             ...extraGraduacion,
           })
-        } else {
+        } else if (!fila.nombre_impreso) {
           documento.nombre = `${documento.nombre}, ${nombre}`
         }
         gruposMap.set(fila.nombre_rol, grupo)

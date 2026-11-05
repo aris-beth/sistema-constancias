@@ -52,12 +52,12 @@ describe('procesarFilaExcel', () => {
     expect(resultado.textoGenerado).toContain('Por obtener el 1er')
   })
 
-  it('cada participante del grupo se normaliza de forma independiente (apellido primero, mayúsculas)', () => {
+  it('cada participante del grupo se normaliza de forma independiente sin reordenar sus nombres', () => {
     const fila = filaBase({ nombreCompleto: 'Juan Pérez, María López' })
     const resultado = procesarFilaExcel(fila, catalogoVacio, ROLES_RECONOCIDOS)
 
-    expect(resultado.participantes[0].nombreNormalizado).toBe('PEREZ JUAN')
-    expect(resultado.participantes[1].nombreNormalizado).toBe('LOPEZ MARIA')
+    expect(resultado.participantes[0].nombreNormalizado).toBe('JUAN PEREZ')
+    expect(resultado.participantes[1].nombreNormalizado).toBe('MARIA LOPEZ')
   })
 
   it('una fila con un rol no reconocido se reporta como error y no genera participantes', () => {

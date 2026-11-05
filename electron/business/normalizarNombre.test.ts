@@ -6,8 +6,8 @@ const catalogo = construirMapaAbreviaturas()
 
 describe('normalizarNombre', () => {
   it.each([
-    ['DOCTOR/JUAN PEREZ', 'DR. PEREZ JUAN'],
-    ['dr. Juan Perez', 'DR. PEREZ JUAN'],
+    ['DOCTOR/JUAN PEREZ', 'DR. JUAN PEREZ'],
+    ['dr. Juan Perez', 'DR. JUAN PEREZ'],
   ])('normaliza %s', (entrada, esperado) => {
     const resultado = normalizarNombre(entrada, catalogo)
 
@@ -16,47 +16,57 @@ describe('normalizarNombre', () => {
     expect(resultado.confianza).toBe('alta')
   })
 
-  it('quita ESTUDIANTE y reordena un nombre de dos tokens', () => {
+  it('quita ESTUDIANTE y conserva el orden original del nombre', () => {
     expect(normalizarNombre('ESTUDIANTE JUAN PEREZ', catalogo)).toEqual({
-      nombreNormalizado: 'PEREZ JUAN',
+      nombreNormalizado: 'JUAN PEREZ',
       gradoDetectado: null,
       confianza: 'alta',
     })
   })
 
-  it('normaliza el grado y dos apellidos sin volver a rotar el orden', () => {
+  it('normaliza el grado y conserva el orden original del nombre', () => {
     const resultado = normalizarNombre('Dra. Ivonne Balderas Gutierrez', catalogo)
 
     expect(resultado).toEqual({
-      nombreNormalizado: 'DRA. BALDERAS GUTIERREZ IVONNE',
+      nombreNormalizado: 'DRA. IVONNE BALDERAS GUTIERREZ',
       gradoDetectado: 'DRA.',
       confianza: 'alta',
     })
   })
 
   it.each([
-    ['JUAN PEREZ', 'PEREZ JUAN'],
-    ['JUAN PEREZ LOPEZ', 'PEREZ LOPEZ JUAN'],
-    ['JUAN CARLOS PEREZ LOPEZ', 'PEREZ LOPEZ JUAN CARLOS'],
-    ['JUAN CARLOS MARIO PEREZ LOPEZ', 'PEREZ LOPEZ JUAN CARLOS MARIO'],
-  ])('reordena exactamente un nombre de %s', (entrada, esperado) => {
+    ['JUAN PEREZ', 'JUAN PEREZ'],
+    ['JUAN PEREZ LOPEZ', 'JUAN PEREZ LOPEZ'],
+    ['JUAN CARLOS PEREZ LOPEZ', 'JUAN CARLOS PEREZ LOPEZ'],
+    ['JUAN CARLOS MARIO PEREZ LOPEZ', 'JUAN CARLOS MARIO PEREZ LOPEZ'],
+  ])('conserva el orden de las palabras de %s', (entrada, esperado) => {
     const resultado = normalizarNombre(entrada, catalogo)
 
     expect(resultado.nombreNormalizado).toBe(esperado)
     expect(resultado.confianza).toBe('alta')
   })
 
-  it('marca confianza baja para seis o más tokens', () => {
+  it('mantiene alta confianza en nombres largos cuando no hay señales de ambigüedad', () => {
     const resultado = normalizarNombre('JUAN CARLOS MARIO PEREZ LOPEZ GARCIA', catalogo)
 
     expect(resultado.nombreNormalizado).toBe('JUAN CARLOS MARIO PEREZ LOPEZ GARCIA')
-    expect(resultado.confianza).toBe('baja')
+    expect(resultado.confianza).toBe('alta')
+  })
+
+  it('mantiene alta confianza en nombres con conectores de apellidos', () => {
+    for (const nombre of ['JUAN DE PEREZ', 'JUAN DE LA TORRE', 'JUAN DEL TORO', 'JUAN DE LOS SANTOS', 'JUAN DE LAS NIEVES']) {
+      expect(normalizarNombre(nombre, catalogo).confianza).toBe('alta')
+    }
+  })
+
+  it('marca baja confianza para una sola palabra', () => {
+    expect(normalizarNombre('Madonna', catalogo).confianza).toBe('baja')
   })
 
   it('normaliza cada persona de una constancia grupal', () => {
     const resultado = normalizarNombre('JUAN PEREZ, ANA LOPEZ', catalogo)
 
-    expect(resultado.nombreNormalizado).toBe('PEREZ JUAN, LOPEZ ANA')
+    expect(resultado.nombreNormalizado).toBe('JUAN PEREZ, ANA LOPEZ')
     expect(resultado.confianza).toBe('alta')
   })
 
@@ -66,7 +76,7 @@ describe('normalizarNombre', () => {
       catalogo,
     )
 
-    expect(resultado.nombreNormalizado).toBe('PEREZ JUAN Y LOPEZ ANA')
+    expect(resultado.nombreNormalizado).toBe('JUAN PEREZ Y ANA LOPEZ')
     expect(resultado.confianza).toBe('baja')
   })
 
@@ -77,20 +87,42 @@ describe('normalizarNombre', () => {
     )
 
     expect(resultado.nombreNormalizado).toBe(
-      'DRA. ETCHEVERRY DOGER ERIKA BEATRIZ, DRA. ANTON SARABIA JENNIFER Y DRA. TEUTLI MELLADO KARLA MARISOL',
+      'DRA. ERIKA BEATRIZ ETCHEVERRY DOGER, DRA. JENNIFER ANTON SARABIA Y DRA. KARLA MARISOL TEUTLI MELLADO',
     )
     expect(resultado.confianza).toBe('baja')
   })
 
   it.each([
-    'JUAN DE PEREZ',
-    'JUAN DE LA TORRE',
-    'JUAN DEL TORO',
-    'JUAN DE LOS SANTOS',
-    'JUAN DE LAS NIEVES',
     'JUAN PEREZ Y ANA LOPEZ',
   ])('marca baja confianza cuando el nombre contiene el conector ambiguo de %s', (entrada) => {
     expect(normalizarNombre(entrada, catalogo).confianza).toBe('baja')
+  })
+
+  it('marca baja confianza y conserva los puntos de una abreviatura desconocida', () => {
+    const resultado = normalizarNombre('M.Ca Juan Perez', catalogo)
+
+    expect(resultado.nombreNormalizado).toBe('M.CA JUAN PEREZ')
+    expect(resultado.gradoDetectado).toBeNull()
+    expect(resultado.confianza).toBe('baja')
+  })
+
+  it('acepta abreviaturas puntadas agregadas al catálogo', () => {
+    const catalogoExtendido = construirMapaAbreviaturas([
+      { formaEncontrada: 'M.Ca', abreviaturaAceptada: 'M.CA.' },
+    ])
+    const resultado = normalizarNombre('M.Ca Juan Perez', catalogoExtendido)
+
+    expect(resultado.nombreNormalizado).toBe('M.CA. JUAN PEREZ')
+    expect(resultado.gradoDetectado).toBe('M.CA.')
+    expect(resultado.confianza).toBe('alta')
+  })
+
+  it('reconoce abreviaturas compuestas escritas con espacios', () => {
+    const resultado = normalizarNombre('M. C. Juan Perez', catalogo)
+
+    expect(resultado.nombreNormalizado).toBe('M.C. JUAN PEREZ')
+    expect(resultado.gradoDetectado).toBe('M.C.')
+    expect(resultado.confianza).toBe('alta')
   })
 
   it('no marca baja confianza por sílabas que solo contienen esos conectores', () => {
@@ -100,7 +132,7 @@ describe('normalizarNombre', () => {
   it('reemplaza guiones entre partes del nombre por espacios antes de normalizar', () => {
     const resultado = normalizarNombre('Juan Perez-Lopez', catalogo)
 
-    expect(resultado.nombreNormalizado).toBe('PEREZ LOPEZ JUAN')
+    expect(resultado.nombreNormalizado).toBe('JUAN PEREZ LOPEZ')
     expect(resultado.nombreNormalizado).not.toContain('-')
     expect(resultado.confianza).toBe('alta')
   })
@@ -113,7 +145,7 @@ describe('normalizarNombre', () => {
     const resultado = normalizarNombre('DR DOCTOR JUAN PEREZ', catalogo)
 
     expect(resultado.gradoDetectado).toBe('DR.')
-    expect(resultado.nombreNormalizado).toBe('DR. PEREZ JUAN')
+    expect(resultado.nombreNormalizado).toBe('DR. JUAN PEREZ')
     expect(resultado.confianza).toBe('baja')
   })
 })

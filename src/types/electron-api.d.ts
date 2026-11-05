@@ -23,6 +23,10 @@ import type {
   EstadisticasEntrada,
   EstadisticasResultado,
   ListarEventosReimprimiblesEntrada,
+  ConstanciaCorreccion,
+  GuardarCorreccionConstanciaEntrada,
+  GenerarCorreccionesEntrada,
+  GenerarCorreccionesResultado,
 } from '../../shared/types/ipc'
 import type { Evento } from '../../shared/types/evento'
 import type {
@@ -46,6 +50,9 @@ declare global {
       guardarGraduacion: (entrada: GuardarGraduacionEntrada) => Promise<GuardarGraduacionResultado>
       generarPdfs: (entrada: GenerarPdfsEntrada) => Promise<GenerarPdfsResultado>
       listarEventosReimprimibles: (entrada: ListarEventosReimprimiblesEntrada) => Promise<Evento[]>
+      listarConstanciasParaCorreccion: (folioEvento: string) => Promise<ConstanciaCorreccion[]>
+      guardarCorreccionConstancia: (entrada: GuardarCorreccionConstanciaEntrada) => Promise<ConstanciaCorreccion>
+      generarCorrecciones: (entrada: GenerarCorreccionesEntrada) => Promise<GenerarCorreccionesResultado>
       seleccionarCarpetaDestino: () => Promise<string | null>
       previsualizarDocumento: (entrada: PrevisualizarEntrada) => Promise<string>
       obtenerConfiguracion: () => Promise<ConfiguracionInicial>

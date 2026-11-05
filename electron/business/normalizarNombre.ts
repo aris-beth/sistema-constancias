@@ -2,11 +2,12 @@ import { PALABRAS_NO_GRADO } from './catalogos/palabrasNoGrado'
 import { separarParticipantes } from './separarParticipantes'
 import type { ResultadoNormalizacion } from '../../shared/types/normalizacion'
 
-const MAXIMO_TOKENS_CONFIANZA_ALTA = 5
-const CONECTOR_AMBIGUO = /\b(?:de(?:\s+(?:la|los|las))?|del|y)\b/i
+const CONJUNCION_PARTICIPANTES = /\by\b/i
 
 function separarAbreviaturasPegadas(texto: string): string {
-  return texto.replace(/([A-Za-zÀ-ÿ]{2,})\.(?=[A-Za-zÀ-ÿ])/g, '$1. ')
+  return texto
+    .replace(/\b([A-Za-zÀ-ÿ])\.\s+([A-Za-zÀ-ÿ])\./g, '$1.$2.')
+    .replace(/([A-Za-zÀ-ÿ]{2,})\.(?=[A-Za-zÀ-ÿ])/g, '$1. ')
 }
 
 /**
@@ -27,8 +28,8 @@ function quitarAcentos(texto: string): string {
 
 /**
  * Normaliza un token individual para poder compararlo contra el catálogo:
- * mayúsculas, sin acentos, sin puntos (para que "Dr." y "DR" generen el
- * mismo resultado de búsqueda).
+ * mayúsculas, sin acentos y sin puntos para buscar en el catálogo, sin
+ * alterar la forma que se imprime cuando el token no está reconocido.
  */
 function normalizarToken(token: string): string {
   return quitarAcentos(token).toUpperCase().replace(/\./g, '')
@@ -38,29 +39,6 @@ function tokenizar(texto: string): string[] {
   return texto.split(' ').filter((token) => token.length > 0)
 }
 
-
-function reordenarApellidosPrimero(tokens: string[]): string[] {
-  if (tokens.length === 2) {
-    // [Nombre, Apellido] → [Apellido, Nombre]
-    return [tokens[1], tokens[0]]
-  }
-  if (tokens.length === 3) {
-    // [Nombre, ApellidoP, ApellidoM] → [ApellidoP, ApellidoM, Nombre]
-    return [tokens[1], tokens[2], tokens[0]]
-  }
-  if (tokens.length === 4) {
-    // [Nombre1, Nombre2, ApellidoP, ApellidoM] → [ApellidoP, ApellidoM, Nombre1, Nombre2]
-    return [tokens[2], tokens[3], tokens[0], tokens[1]]
-  }
-  if (tokens.length === 5) {
-    // [Nombre1, Nombre2, Nombre3, ApellidoP, ApellidoM] → [ApellidoP,
-    // ApellidoM, Nombre1, Nombre2, Nombre3].
-    return [tokens[3], tokens[4], tokens[0], tokens[1], tokens[2]]
-  }
-  // 1 token (mononombre) o 6+ tokens: no hay un patrón confiable, se deja
-  // tal cual llegó y se marcará confianza "baja".
-  return tokens
-}
 
 /**
  * Normaliza el nombre de UNA sola persona (ya separada de las demás si
@@ -72,13 +50,16 @@ function normalizarPersona(
   catalogoAbreviaturas: Map<string, string>,
 ): ResultadoNormalizacion {
   const textoLimpio = limpiarSeparadores(nombreOriginal)
-  let tokens = tokenizar(textoLimpio).map(normalizarToken)
+  let tokens = tokenizar(textoLimpio).map((token) => {
+    const texto = quitarAcentos(token).toUpperCase()
+    return { texto, clave: normalizarToken(texto) }
+  })
 
   // 1) Buscar grado académico entre los tokens (antes de quitar nada más).
   let gradoDetectado: string | null = null
   let coincidenciasDeGrado = 0
   for (const token of tokens) {
-    const abreviatura = catalogoAbreviaturas.get(token)
+    const abreviatura = catalogoAbreviaturas.get(token.clave)
     if (abreviatura) {
       coincidenciasDeGrado += 1
       if (gradoDetectado === null) {
@@ -87,13 +68,16 @@ function normalizarPersona(
     }
   }
   const gradoAmbiguo = coincidenciasDeGrado > 1
+  const abreviaturaDesconocida = tokens.some(
+    (token) => token.texto.includes('.') && !catalogoAbreviaturas.has(token.clave),
+  )
 
   // 2) Quitar palabras que no son grados reales ("ESTUDIANTE", "ALUMNO"...).
-  tokens = tokens.filter((token) => !PALABRAS_NO_GRADO.has(token))
+  tokens = tokens.filter((token) => !PALABRAS_NO_GRADO.has(token.clave))
 
   // 3) Si se detectó grado, quitar el/los token(s) que lo generaron.
   if (gradoDetectado !== null) {
-    tokens = tokens.filter((token) => !catalogoAbreviaturas.has(token))
+    tokens = tokens.filter((token) => !catalogoAbreviaturas.has(token.clave))
   }
 
   if (tokens.length === 0) {
@@ -103,14 +87,14 @@ function normalizarPersona(
     )
   }
 
-  const nombreOrdenado = reordenarApellidosPrimero(tokens)
-  const nombreNormalizado = (gradoDetectado ? `${gradoDetectado} ` : '') + nombreOrdenado.join(' ')
+  const nombreNormalizado =
+    (gradoDetectado ? `${gradoDetectado} ` : '') + tokens.map((token) => token.texto).join(' ')
 
   const confianza: ResultadoNormalizacion['confianza'] =
     gradoAmbiguo ||
+    abreviaturaDesconocida ||
     tokens.length < 2 ||
-    tokens.length > MAXIMO_TOKENS_CONFIANZA_ALTA ||
-    CONECTOR_AMBIGUO.test(nombreOriginal)
+    CONJUNCION_PARTICIPANTES.test(nombreOriginal)
       ? 'baja'
       : 'alta'
 
@@ -174,7 +158,7 @@ export function normalizarNombre(
     gradoDetectado: gradosDetectados.length > 0 ? gradosDetectados[0] : null,
     confianza:
       resultados.every((resultado) => resultado.confianza === 'alta') &&
-      !CONECTOR_AMBIGUO.test(nombreOriginal)
+      !CONJUNCION_PARTICIPANTES.test(nombreOriginal)
         ? 'alta'
         : 'baja',
   }

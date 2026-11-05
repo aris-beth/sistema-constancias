@@ -5,34 +5,34 @@ import { construirMapaAbreviaturas } from '../../electron/business/catalogos/abr
 const catalogo = construirMapaAbreviaturas()
 
 describe('normalizarNombre', () => {
-  it('reconoce el grado con separador "/" y reordena apellidos primero', () => {
+  it('reconoce el grado con separador "/" y conserva el orden del nombre', () => {
     const resultado = normalizarNombre('DOCTOR/JUAN PEREZ', catalogo)
     expect(resultado.gradoDetectado).toBe('Dr.')
-    expect(resultado.nombreNormalizado).toBe('Dr. PEREZ JUAN')
+    expect(resultado.nombreNormalizado).toBe('Dr. JUAN PEREZ')
     expect(resultado.confianza).toBe('alta')
   })
 
   it('reconoce el grado abreviado con minúsculas y punto ("dr.")', () => {
     const resultado = normalizarNombre('dr. Juan Perez', catalogo)
     expect(resultado.gradoDetectado).toBe('Dr.')
-    expect(resultado.nombreNormalizado).toBe('Dr. PEREZ JUAN')
+    expect(resultado.nombreNormalizado).toBe('Dr. JUAN PEREZ')
   })
 
   it('elimina "ESTUDIANTE" sin tratarlo como grado académico', () => {
     const resultado = normalizarNombre('ESTUDIANTE JUAN PEREZ', catalogo)
     expect(resultado.gradoDetectado).toBeNull()
-    expect(resultado.nombreNormalizado).toBe('PEREZ JUAN')
+    expect(resultado.nombreNormalizado).toBe('JUAN PEREZ')
   })
 
   it('normaliza un nombre simple sin grado', () => {
     const resultado = normalizarNombre('JUAN PEREZ', catalogo)
-    expect(resultado.nombreNormalizado).toBe('PEREZ JUAN')
+    expect(resultado.nombreNormalizado).toBe('JUAN PEREZ')
     expect(resultado.confianza).toBe('alta')
   })
 
   it('es insensible a mayúsculas/minúsculas mezcladas', () => {
     const resultado = normalizarNombre('Juan PEREZ', catalogo)
-    expect(resultado.nombreNormalizado).toBe('PEREZ JUAN')
+    expect(resultado.nombreNormalizado).toBe('JUAN PEREZ')
   })
 
   it('marca confianza baja cuando el nombre tiene un solo token', () => {
@@ -40,28 +40,28 @@ describe('normalizarNombre', () => {
     expect(resultado.confianza).toBe('baja')
   })
 
-  it('marca confianza baja ante un nombre con demasiados tokens', () => {
+  it('mantiene alta confianza en un nombre con más de cinco tokens', () => {
     const resultado = normalizarNombre('Juan Carlos Perez Lopez Garcia Ruiz', catalogo)
-    expect(resultado.confianza).toBe('baja')
+    expect(resultado.confianza).toBe('alta')
   })
 
-  it('marca confianza baja con seis palabras aunque incluya un grado académico', () => {
+  it('mantiene alta confianza con seis palabras y un grado académico', () => {
     const resultado = normalizarNombre(
       'Dr. Juan Carlos de la Torre García López',
       catalogo,
     )
     expect(resultado.gradoDetectado).toBe('Dr.')
-    expect(resultado.confianza).toBe('baja')
+    expect(resultado.confianza).toBe('alta')
   })
 
-  it('marca baja confianza con un conector ambiguo aunque tenga cinco palabras', () => {
+  it('mantiene alta confianza con conectores en apellidos', () => {
     const resultado = normalizarNombre('Juan Carlos de la Torre', catalogo)
-    expect(resultado.confianza).toBe('baja')
+    expect(resultado.confianza).toBe('alta')
   })
 
-  it('reordena correctamente dos nombres y dos apellidos', () => {
+  it('conserva el orden de dos nombres y dos apellidos', () => {
     const resultado = normalizarNombre('Maria Jose Lopez Garcia', catalogo)
-    expect(resultado.nombreNormalizado).toBe('LOPEZ GARCIA MARIA JOSE')
+    expect(resultado.nombreNormalizado).toBe('MARIA JOSE LOPEZ GARCIA')
     expect(resultado.confianza).toBe('alta')
   })
 
@@ -72,13 +72,13 @@ describe('normalizarNombre', () => {
   it('separa una abreviatura pegada al nombre sin espacio ("dr.Ernesto")', () => {
     const resultado = normalizarNombre('dr.Ernesto Gomez Diaz', catalogo)
     expect(resultado.gradoDetectado).toBe('Dr.')
-    expect(resultado.nombreNormalizado).toBe('Dr. GOMEZ DIAZ ERNESTO')
+    expect(resultado.nombreNormalizado).toBe('Dr. ERNESTO GOMEZ DIAZ')
   })
 
   it('no rompe la abreviatura compuesta "M.C." al separar abreviaturas pegadas', () => {
     const resultado = normalizarNombre('M.C. Juan Perez', catalogo)
     expect(resultado.gradoDetectado).toBe('M.C.')
-    expect(resultado.nombreNormalizado).toBe('M.C. PEREZ JUAN')
+    expect(resultado.nombreNormalizado).toBe('M.C. JUAN PEREZ')
   })
 
   it('normaliza un grupo de 3 personas separadas por comas', () => {
@@ -87,23 +87,23 @@ describe('normalizarNombre', () => {
       catalogo,
     )
     expect(resultado.nombreNormalizado).toBe(
-      'ESPINOSA ROMERO MAURICIO, ESPINOSA ROMERO MAURICIO, Dra. ZARAGOZA MELO ROSA MICHEL',
+      'MAURICIO ESPINOSA ROMERO, MAURICIO ESPINOSA ROMERO, Dra. ROSA MICHEL ZARAGOZA MELO',
     )
   })
 
-  it('conserva "y" dentro de una celda porque solo la coma agrupa personas', () => {
+  it('conserva comas y "y" sin reordenar los nombres individuales', () => {
     const resultado = normalizarNombre(
       'Dra. Erika Beatriz Etcheverry Doger, Dra. Jennifer Antón Sarabia y Dra. Karla Marisol Teutli Mellado',
       catalogo,
     )
     expect(resultado.nombreNormalizado).toBe(
-      'Dra. ETCHEVERRY DOGER ERIKA BEATRIZ, Dra. JENNIFER ANTON SARABIA Y KARLA MARISOL TEUTLI MELLADO',
+      'Dra. ERIKA BEATRIZ ETCHEVERRY DOGER, Dra. JENNIFER ANTON SARABIA Y KARLA MARISOL TEUTLI MELLADO',
     )
     expect(resultado.confianza).toBe('baja')
   })
 
-  it('trata una celda sin comas como una sola persona', () => {
+  it('separa y conserva el orden de personas unidas por "y"', () => {
     const resultado = normalizarNombre('Juan Perez y Ana Lopez', catalogo)
-    expect(resultado.nombreNormalizado).toBe('ANA LOPEZ JUAN PEREZ Y')
+    expect(resultado.nombreNormalizado).toBe('JUAN PEREZ Y ANA LOPEZ')
   })
 })

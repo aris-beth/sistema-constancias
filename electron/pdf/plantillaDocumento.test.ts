@@ -151,6 +151,17 @@ describe('plantillaDocumento', () => {
     expect(html).toContain('.destinatario .prefijo { font-weight: 700; }')
   })
 
+  it('ajusta el ancho del nombre a los límites visibles del subtítulo institucional', () => {
+    const html = crearHtmlDocumento(
+      [crearPaginaRegular(documento(), sello, RECURSOS_VACIOS)],
+      RECURSOS_VACIOS,
+    )
+
+    expect(html).toContain('.destinatario { font-size: 16pt; line-height: 1.2; max-width: 100%; overflow-wrap: anywhere; }')
+    expect(html).toContain("document.querySelector('.encabezado-inst .subtitulo:not(.otorga)')")
+    expect(html).toContain('destinatario.style.maxWidth = anchoSubtitulo + \'px\'')
+  })
+
   it('la graduación imprime dos firmantes y ningún bloque de folio', () => {
     const html = crearPaginaGraduacion(documento(), firmantes)
     expect(html).toContain('Rector de prueba')

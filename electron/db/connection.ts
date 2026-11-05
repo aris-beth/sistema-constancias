@@ -111,6 +111,22 @@ function ejecutarMigraciones(db: Database.Database): void {
     db.exec('ALTER TABLE constancia ADD COLUMN universidad_origen TEXT')
   }
 
+  if (!nombresColumnas.has('nombre_impreso')) {
+    db.exec('ALTER TABLE constancia ADD COLUMN nombre_impreso TEXT')
+  }
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS constancia_correccion (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      constancia_id INTEGER NOT NULL REFERENCES constancia(id) ON DELETE CASCADE,
+      nombre_anterior TEXT NOT NULL,
+      nombre_nuevo TEXT NOT NULL,
+      texto_anterior TEXT NOT NULL,
+      texto_nuevo TEXT NOT NULL,
+      fecha_correccion TEXT NOT NULL
+    )
+  `)
+
   if (!nombresColumnas.has('estado')) {
     // Backfill deliberado a 'generada': estas filas ya existían antes de
     // que el sistema distinguiera pendiente/generada, lo que en la

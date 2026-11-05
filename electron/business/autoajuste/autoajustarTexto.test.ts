@@ -11,9 +11,10 @@ describe('autoajustarTexto', () => {
   it.each([
     [39, 16, 1],
     [40, 16, 1],
-    [41, 14, 2],
-    [80, 14, 2],
-    [81, 11, 3],
+    [42, 16, 1],
+    [43, 14, 2],
+    [82, 14, 2],
+    [83, 11, 3],
   ])('usa el nivel exacto para un nombre de %s caracteres', (longitud, fuente, lineas) => {
     const resultado = autoajustarTexto(textoDeLongitud(longitud), 'nombre')
 
@@ -29,6 +30,41 @@ describe('autoajustarTexto', () => {
     expect(resultado.tamanoFuentePt).toBe(11)
     expect(resultado.lineas).toHaveLength(3)
     expect(resultado.excedeLimiteCalibrado).toBe(false)
+  })
+
+  it('balancea el ancho y permite saltos entre palabras completas de un nombre', () => {
+    const nombres = [
+      'Alejandra Montserrat Fernández',
+      'Roberto Carlos Martínez',
+      'Luis Pérez',
+      'Eva Ruiz',
+    ]
+    const resultado = autoajustarTexto(nombres.join(', '), 'nombre')
+    const anchos = resultado.lineas.map((linea) => linea.length)
+
+    expect(resultado.lineas).toHaveLength(2)
+    expect(Math.max(...anchos) - Math.min(...anchos)).toBeLessThanOrEqual(2)
+    expect(resultado.lineas[0]).toMatch(/Roberto$/)
+    expect(resultado.lineas[1]).toMatch(/^Carlos/)
+    expect(resultado.lineas.join(' ')).toBe(nombres.join(', '))
+  })
+
+  it('conserva comas y orden al repartir palabras de cinco nombres', () => {
+    const nombres = [
+      'Ana María Fernanda López Hernández',
+      'Beto Cruz de la Fuente',
+      'Carla Díaz del Río',
+      'Diego Solís Martínez',
+      'Elena Ruiz de los Santos',
+    ]
+    const resultado = autoajustarTexto(nombres.join(', '), 'nombre')
+    const textoEsperado = nombres.join(', ')
+    const anchos = resultado.lineas.map((linea) => linea.length)
+
+    expect(resultado.lineas.length).toBeGreaterThan(1)
+    expect(Math.max(...anchos) - Math.min(...anchos)).toBeLessThanOrEqual(4)
+    expect(resultado.lineas.join(' ')).toBe(textoEsperado)
+    expect(resultado.lineas.join(' ')).not.toContain('  ')
   })
 
   it('mantiene dentro del nivel calibrado una ponencia de 130 caracteres', () => {

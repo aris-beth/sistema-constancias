@@ -16,7 +16,12 @@ import {
   registroAFilaCruda,
   registroAFilaCrudaGraduacion,
 } from './utils/registros';
-import type { FilaProcesada, FilaProcesadaGraduacion } from '../shared/types/ipc';
+import type {
+  ConstanciaCorreccion,
+  FilaProcesada,
+  FilaProcesadaGraduacion,
+  GenerarCorreccionesResultado,
+} from '../shared/types/ipc';
 import type { ArticuloEvento, Evento } from '../shared/types/evento';
 import './styles/design-system.css';
 
@@ -49,10 +54,24 @@ const App: React.FC = () => {
   // reintento (p. ej. si falló solo el PDF) no vuelva a reemplazar el lote.
   const [folioPersistido, setFolioPersistido] = useState<string | null>(null);
   const [esReimpresion, setEsReimpresion] = useState(false);
+  const [correccionActiva, setCorreccionActiva] = useState<{
+    folioEvento: string
+    documentos: ConstanciaCorreccion[]
+  } | null>(null);
+  const [borradoresCorreccion, setBorradoresCorreccion] = useState<
+    Record<number, { nombre: string; textoGenerado: string }>
+  >({});
+  const [seleccionCorreccion, setSeleccionCorreccion] = useState<number[]>([]);
+  const [guardandoCorrecciones, setGuardandoCorrecciones] = useState(false);
+  const [generandoCorrecciones, setGenerandoCorrecciones] = useState(false);
+  const [errorCorrecciones, setErrorCorrecciones] = useState<string | null>(null);
+  const [resultadoCorrecciones, setResultadoCorrecciones] =
+    useState<GenerarCorreccionesResultado | null>(null);
 
   // Función de bloqueo de navegación
   const tieneErroresBloqueantes =
-    pasoConstancias === 'validacion' && (errores.length > 0 || filasPendientes.length > 0);
+    !correccionActiva && pasoConstancias === 'validacion' &&
+    (errores.length > 0 || filasPendientes.length > 0);
 
   const manejarSiguiente = () => {
     if (tieneErroresBloqueantes) return; // Validación funcional: Bloquear si hay errores
@@ -66,6 +85,14 @@ const App: React.FC = () => {
   };
 
   const manejarRegresar = () => {
+    if (correccionActiva) {
+      setCorreccionActiva(null);
+      setVistaActiva('folios');
+      setSeleccionCorreccion([]);
+      setErrorCorrecciones(null);
+      setResultadoCorrecciones(null);
+      return;
+    }
     switch (pasoConstancias) {
       case 'generar':
         if (esReimpresion) {
@@ -194,6 +221,20 @@ const App: React.FC = () => {
   };
 
   const manejarActualizarRegistro = (idFila: string, campo: string, valor: any) => {
+    if (correccionActiva) {
+      const constanciaId = Number(idFila);
+      if (campo !== 'nombre' && campo !== 'textoGenerado') return;
+      setBorradoresCorreccion((actuales) => ({
+        ...actuales,
+        [constanciaId]: {
+          ...actuales[constanciaId],
+          [campo]: String(valor),
+        },
+      }));
+      setResultadoCorrecciones(null);
+      setErrorCorrecciones(null);
+      return;
+    }
     // Si se edita algo después de guardar, el lote guardado ya no coincide.
     setFolioPersistido(null);
     const manuales = camposManuales.current.get(idFila) ?? new Set<string>();
@@ -206,6 +247,147 @@ const App: React.FC = () => {
       return { ...r, [campo]: valor };
     }));
   };
+
+  const manejarAbrirCorrecciones = async (folio: string): Promise<void> => {
+    const documentos = await window.electronAPI.listarConstanciasParaCorreccion(folio);
+    if (documentos.length === 0) {
+      throw new Error(`El evento "${folio}" no tiene constancias generadas para corregir.`);
+    }
+    setCorreccionActiva({ folioEvento: folio, documentos });
+    setBorradoresCorreccion(Object.fromEntries(
+      documentos.map((documento) => [
+        documento.id,
+        { nombre: documento.nombre, textoGenerado: documento.textoGenerado },
+      ]),
+    ));
+    setSeleccionCorreccion([]);
+    setErrorCorrecciones(null);
+    setResultadoCorrecciones(null);
+    setVistaActiva('constancias');
+    setPasoConstancias('validacion');
+  };
+
+  const manejarSeleccionCorreccion = (id: number, seleccionado: boolean): void => {
+    setSeleccionCorreccion((actual) =>
+      seleccionado
+        ? actual.includes(id) ? actual : [...actual, id]
+        : actual.filter((seleccionadoId) => seleccionadoId !== id),
+    );
+    setResultadoCorrecciones(null);
+  };
+
+  const cambiosPendientesCorreccion = correccionActiva
+    ? correccionActiva.documentos.filter((documento) => {
+        const borrador = borradoresCorreccion[documento.id];
+        return borrador?.nombre !== documento.nombre ||
+          borrador?.textoGenerado !== documento.textoGenerado;
+      })
+    : [];
+  const idsPendientesCorreccion = new Set(cambiosPendientesCorreccion.map((documento) => documento.id));
+  const cambiosSeleccionadosPendientes = seleccionCorreccion.filter((id) => idsPendientesCorreccion.has(id));
+
+  const manejarGuardarCorreccionesSeleccionadas = async (): Promise<void> => {
+    if (!correccionActiva || guardandoCorrecciones) return;
+    const documentos = correccionActiva.documentos.filter(
+      (documento) => seleccionCorreccion.includes(documento.id) && idsPendientesCorreccion.has(documento.id),
+    );
+    if (documentos.length === 0) return;
+    setGuardandoCorrecciones(true);
+    setErrorCorrecciones(null);
+    setResultadoCorrecciones(null);
+    const erroresGuardado: string[] = [];
+    try {
+      for (const documento of documentos) {
+        const borrador = borradoresCorreccion[documento.id];
+        try {
+          const actualizado = await window.electronAPI.guardarCorreccionConstancia({
+            folioEvento: correccionActiva.folioEvento,
+            constanciaId: documento.id,
+            nombre: borrador.nombre,
+            textoGenerado: borrador.textoGenerado,
+          });
+          setCorreccionActiva((actual) => actual && ({
+            ...actual,
+            documentos: actual.documentos.map((item) =>
+              item.id === actualizado.id ? actualizado : item,
+            ),
+          }));
+          setBorradoresCorreccion((actual) => ({
+            ...actual,
+            [actualizado.id]: {
+              nombre: actualizado.nombre,
+              textoGenerado: actualizado.textoGenerado,
+            },
+          }));
+        } catch (error) {
+          erroresGuardado.push(
+            `${documento.folioInterno}: ${error instanceof Error ? error.message : String(error)}`,
+          );
+        }
+      }
+      setErrorCorrecciones(
+        erroresGuardado.length > 0
+          ? `No se pudieron guardar todas las correcciones:\n${erroresGuardado.join('\n')}`
+          : null,
+      );
+    } finally {
+      setGuardandoCorrecciones(false);
+    }
+  };
+
+  const manejarGenerarCorreccionesSeleccionadas = async (): Promise<void> => {
+    if (!correccionActiva || seleccionCorreccion.length === 0) return;
+    if (cambiosSeleccionadosPendientes.length > 0) {
+      setErrorCorrecciones('Guarda los cambios seleccionados antes de generar los PDF.');
+      return;
+    }
+    if (!window.confirm(
+      `Se generará un solo PDF con ${seleccionCorreccion.length} corrección(es) en una carpeta separada. Los originales no se modificarán. ¿Continuar?`,
+    )) return;
+    setGenerandoCorrecciones(true);
+    setErrorCorrecciones(null);
+    setResultadoCorrecciones(null);
+    try {
+      const carpetaDestino = await window.electronAPI.seleccionarCarpetaDestino();
+      if (!carpetaDestino) return;
+      const resultado = await window.electronAPI.generarCorrecciones({
+        folioEvento: correccionActiva.folioEvento,
+        constanciaIds: seleccionCorreccion,
+        carpetaDestino,
+      });
+      setResultadoCorrecciones(resultado);
+      if (resultado.errores.length > 0) {
+        const resumenPdf = resultado.rutas.length > 0
+          ? 'Se generó un PDF'
+          : 'No se pudo generar el PDF';
+        setErrorCorrecciones(
+          `${resumenPdf}; ${resultado.errores.length} corrección(es) no pudieron incluirse. Consulta el detalle.`,
+        );
+      }
+    } catch (error) {
+      setErrorCorrecciones(error instanceof Error ? error.message : String(error));
+    } finally {
+      setGenerandoCorrecciones(false);
+    }
+  };
+
+  const registrosCorreccion: RegistroExcel[] = correccionActiva
+    ? correccionActiva.documentos.map((documento) => {
+        const borrador = borradoresCorreccion[documento.id] ?? {
+          nombre: documento.nombre,
+          textoGenerado: documento.textoGenerado,
+        };
+        return {
+          idFila: String(documento.id),
+          nombre: borrador.nombre,
+          nombreOriginal: documento.nombre,
+          rol: documento.rol,
+          folioInterno: documento.folioInterno,
+          tipoDocumento: documento.tipoDocumento,
+          textoGenerado: borrador.textoGenerado,
+        };
+      })
+    : [];
 
   // El nombre del evento es un solo dato por lote: se aplica a todas las filas.
   const manejarCambiarNombreEvento = (nombre: string) => {
@@ -386,16 +568,28 @@ const App: React.FC = () => {
           <PantallaValidacion 
             folioEvento={folioEvento}
             setFolioEvento={setFolioEvento}
-            registros={registros}
-            errores={errores}
+            registros={correccionActiva ? registrosCorreccion : registros}
+            errores={correccionActiva ? [] : errores}
             onActualizarRegistro={manejarActualizarRegistro}
-            modo={modoConstancia}
+            modo={correccionActiva?.documentos[0]?.tipoPlantilla ?? modoConstancia}
             onCambiarNombreEvento={manejarCambiarNombreEvento}
             onCambiarArticuloEvento={manejarCambiarArticuloEvento}
-            filasPendientes={filasPendientes}
-            actualizando={actualizando}
-            mensajeActualizacion={mensajeActualizacion}
+            filasPendientes={correccionActiva ? [] : filasPendientes}
+            actualizando={correccionActiva ? guardandoCorrecciones : actualizando}
+            mensajeActualizacion={correccionActiva ? null : mensajeActualizacion}
             onActualizarCambios={manejarActualizarCambios}
+            correccion={correccionActiva ? {
+              folioEvento: correccionActiva.folioEvento,
+              seleccionados: seleccionCorreccion,
+              guardando: guardandoCorrecciones,
+              generando: generandoCorrecciones,
+              cambiosPendientes: cambiosSeleccionadosPendientes.length,
+              error: errorCorrecciones,
+              resultado: resultadoCorrecciones,
+              onToggleSeleccion: manejarSeleccionCorreccion,
+              onGuardarSeleccionadas: () => void manejarGuardarCorreccionesSeleccionadas(),
+              onGenerarSeleccionadas: () => void manejarGenerarCorreccionesSeleccionadas(),
+            } : undefined}
           />
         );
       case 'previsualizacion':
@@ -429,7 +623,12 @@ const App: React.FC = () => {
       case 'metricas':
         return <PanelEstadisticas onVolver={manejarVolverDesdeConfiguracion} />;
       case 'folios':
-        return <CatalogoFolios onVolver={() => setVistaActiva(volverDesdeFolios)} />;
+        return (
+          <CatalogoFolios
+            onVolver={() => setVistaActiva(volverDesdeFolios)}
+            onCorregirEvento={manejarAbrirCorrecciones}
+          />
+        );
       case 'constancias':
       default:
         return renderizarFlujoConstancias();
@@ -464,7 +663,7 @@ const App: React.FC = () => {
 
         {/* Navegación Derecha */}
         <aside className="nav-lateral">
-          {vistaActiva === 'constancias' && pasoConstancias !== 'generar' && (
+          {vistaActiva === 'constancias' && !correccionActiva && pasoConstancias !== 'generar' && (
             <BotonCircular 
               direccion="derecha" 
               etiqueta="SIGUIENTE" 

@@ -30,6 +30,23 @@ interface PantallaValidacionProps {
   actualizando: boolean;
   mensajeActualizacion: string | null;
   onActualizarCambios: () => void;
+  correccion?: {
+    folioEvento: string
+    seleccionados: number[]
+    guardando: boolean
+    generando: boolean
+    cambiosPendientes: number
+    error: string | null
+    resultado: {
+      carpetaCorrecciones: string
+      rutas: string[]
+      errores: Array<{ folioInterno: string; detalle: string }>
+      advertencias: string[]
+    } | null
+    onToggleSeleccion: (id: number, seleccionado: boolean) => void
+    onGuardarSeleccionadas: () => void
+    onGenerarSeleccionadas: () => void
+  }
 }
 
 // Mapeo interno a nombres legibles
@@ -135,9 +152,11 @@ export const PantallaValidacion: React.FC<PantallaValidacionProps> = ({
   actualizando,
   mensajeActualizacion,
   onActualizarCambios,
+  correccion,
 }) => {
   const [filaExpandida, setFilaExpandida] = useState<string | null>(null);
   const [folioSugerido, setFolioSugerido] = useState<string | null>(null);
+  const [busquedaFolio, setBusquedaFolio] = useState('');
 
   // ¿Cómo sabe el programa el nombre del evento? Regular: viene de la
   // columna de evento del Excel (aquí se puede corregir para todo el lote).
@@ -175,6 +194,27 @@ export const PantallaValidacion: React.FC<PantallaValidacionProps> = ({
   const columnasVisibles = COLUMNAS_EXTRA.filter((columna) =>
     registros.some((registro) => celdaTieneValor(registro[columna.key])),
   );
+  const filasVisibles = correccion
+    ? registros.filter((registro) =>
+        `${registro.folioInterno ?? ''} ${registro.nombre ?? ''} ${registro.rol ?? ''}`
+          .toLocaleLowerCase('es-MX')
+          .includes(busquedaFolio.trim().toLocaleLowerCase('es-MX')),
+      )
+    : registros;
+  const idsVisibles = filasVisibles.map((registro) => Number(registro.idFila));
+  const seleccionadosVisibles = idsVisibles.filter((id) => correccion?.seleccionados.includes(id)).length;
+  const todasVisiblesSeleccionadas =
+    idsVisibles.length > 0 && seleccionadosVisibles === idsVisibles.length;
+
+  const toggleSeleccionVisibles = (seleccionar: boolean) => {
+    if (!correccion) return;
+    for (const registro of filasVisibles) {
+      const id = Number(registro.idFila);
+      if (correccion.seleccionados.includes(id) !== seleccionar) {
+        correccion.onToggleSeleccion(id, seleccionar);
+      }
+    }
+  };
 
   const erroresDeFila = (idFila: string) => errores.filter((e) => e.idFila === idFila);
 
@@ -240,7 +280,7 @@ export const PantallaValidacion: React.FC<PantallaValidacionProps> = ({
 
       {/* Contenido Principal */}
       <div className="validacion-main">
-        <div className="evento-info">
+        {!correccion && <div className="evento-info">
           <div className="evento-info-campo">
             <label htmlFor="nombre-evento" style={{ fontWeight: 600 }}>Nombre del evento:</label>
             {modo === 'regular' ? (
@@ -290,9 +330,90 @@ export const PantallaValidacion: React.FC<PantallaValidacionProps> = ({
               </span>
             )}
           </div>
-        </div>
+        </div>}
 
-        <div className="folio-input-container">
+        {correccion ? (
+          <section className="validacion-correccion-tools" aria-label="Buscar y guardar correcciones">
+            <div className="validacion-correccion-heading">
+              <div>
+                <h2>Corregir constancias · {correccion.folioEvento}</h2>
+                <p>Busca por folio interno, selecciona solo los documentos observados y edítalos en esta misma tabla.</p>
+              </div>
+              <span>{filasVisibles.length} de {registros.length} documentos</span>
+            </div>
+            <div className="validacion-correccion-actions">
+              <label className="field" htmlFor="buscar-folio-interno">
+                Buscar folio interno, nombre o rol
+                <input
+                  id="buscar-folio-interno"
+                  type="search"
+                  value={busquedaFolio}
+                  onChange={(evento) => setBusquedaFolio(evento.target.value)}
+                  placeholder="Ej. EVT-2026-001-0003"
+                  autoFocus
+                />
+              </label>
+              <span className="validacion-correccion-seleccion">
+                {correccion.seleccionados.length} seleccionada(s)
+                {correccion.cambiosPendientes > 0 && ` · ${correccion.cambiosPendientes} con cambios sin guardar`}
+              </span>
+              <button
+                className="btn-institucional"
+                type="button"
+                onClick={() => toggleSeleccionVisibles(!todasVisiblesSeleccionadas)}
+                disabled={filasVisibles.length === 0 || correccion.guardando || correccion.generando}
+              >
+                {todasVisiblesSeleccionadas ? 'Quitar visibles' : 'Seleccionar visibles'}
+              </button>
+              <button
+                className="btn-institucional"
+                type="button"
+                onClick={correccion.onGuardarSeleccionadas}
+                disabled={
+                  correccion.seleccionados.length === 0 ||
+                  correccion.cambiosPendientes === 0 ||
+                  correccion.guardando ||
+                  correccion.generando
+                }
+              >
+                {correccion.guardando ? 'Guardando...' : 'Guardar cambios seleccionados'}
+              </button>
+              <button
+                className="btn-institucional"
+                type="button"
+                onClick={correccion.onGenerarSeleccionadas}
+                disabled={
+                  correccion.seleccionados.length === 0 ||
+                  correccion.cambiosPendientes > 0 ||
+                  correccion.guardando ||
+                  correccion.generando
+                }
+              >
+                {correccion.generando
+                  ? 'Generando...'
+                  : `Generar PDF con ${correccion.seleccionados.length} seleccionada(s)`}
+              </button>
+            </div>
+            {correccion.cambiosPendientes > 0 && (
+              <p className="validacion-correccion-nota" role="status">
+                Guarda los cambios antes de generar el PDF. Los archivos originales no se reemplazan.
+              </p>
+            )}
+            {correccion.error && <p className="status-message status-message--error" role="alert">{correccion.error}</p>}
+            {correccion.resultado && (
+              <div className="validacion-correccion-resultado" role="status">
+                <strong>Carpeta de correcciones: {correccion.resultado.carpetaCorrecciones}</strong>
+                {correccion.resultado.rutas.map((ruta) => <span key={ruta}>{ruta}</span>)}
+                {correccion.resultado.errores.map((error) => (
+                  <p className="status-message status-message--error" key={error.folioInterno}>
+                    {error.folioInterno}: {error.detalle}
+                  </p>
+                ))}
+                {correccion.resultado.advertencias.map((aviso, indice) => <p key={`${indice}-${aviso}`}>{aviso}</p>)}
+              </div>
+            )}
+          </section>
+        ) : <div className="folio-input-container">
           <label htmlFor="folio" style={{ fontWeight: 600 }}>Folio (opcional):</label>
           <input
             id="folio"
@@ -316,13 +437,27 @@ export const PantallaValidacion: React.FC<PantallaValidacionProps> = ({
           >
             {actualizando ? 'Actualizando...' : 'Actualizar cambios'}
           </button>
-        </div>
+        </div>}
         {mensajeActualizacion && <p className="mensaje-actualizacion">{mensajeActualizacion}</p>}
 
         <div className="tabla-container">
           <table className="data-table">
             <thead>
               <tr>
+                {correccion && (
+                  <>
+                    <th>
+                      <input
+                        type="checkbox"
+                        aria-label="Seleccionar todas las constancias visibles"
+                        checked={todasVisiblesSeleccionadas}
+                        onChange={(evento) => toggleSeleccionVisibles(evento.target.checked)}
+                        disabled={correccion.guardando || correccion.generando}
+                      />
+                    </th>
+                    <th>Folio interno</th>
+                  </>
+                )}
                 <th>Errores</th>
                 <th>Nombre</th>
                 <th>Participa como</th>
@@ -333,9 +468,10 @@ export const PantallaValidacion: React.FC<PantallaValidacionProps> = ({
               </tr>
             </thead>
             <tbody>
-              {registros.map((registro) => {
+              {filasVisibles.map((registro) => {
                 const erroresFila = erroresDeFila(registro.idFila);
                 const tieneError = erroresFila.length > 0;
+                const constanciaId = Number(registro.idFila);
                 
                 return (
                   <React.Fragment key={registro.idFila}>
@@ -343,6 +479,20 @@ export const PantallaValidacion: React.FC<PantallaValidacionProps> = ({
                       id={`fila-${registro.idFila}`} 
                       className={`fila-dato ${tieneError ? 'con-error' : ''}`}
                     >
+                      {correccion && (
+                        <>
+                          <td>
+                            <input
+                              type="checkbox"
+                              aria-label={`Seleccionar ${registro.folioInterno}`}
+                              checked={correccion.seleccionados.includes(constanciaId)}
+                              onChange={(evento) => correccion.onToggleSeleccion(constanciaId, evento.target.checked)}
+                              disabled={correccion.guardando || correccion.generando}
+                            />
+                          </td>
+                          <td><strong>{registro.folioInterno}</strong></td>
+                        </>
+                      )}
                       <td>
                         {tieneError ? (
                           <span className="celda-error-badge" title={erroresFila.map((e) => e.mensaje).join(' | ')}>
@@ -378,9 +528,13 @@ export const PantallaValidacion: React.FC<PantallaValidacionProps> = ({
                     {/* Fila expandida (Modo Edición) */}
                     {filaExpandida === registro.idFila && (
                       <tr className="fila-expandida">
-                        <td colSpan={4 + columnasVisibles.length}>
+                        <td colSpan={(correccion ? 6 : 4) + columnasVisibles.length}>
                           <div className="editor-grid">
-                            {Object.keys(registro).filter(k => !CAMPOS_OCULTOS_EN_EDICION.has(k)).map(key => (
+                            {Object.keys(registro)
+                              .filter((key) => correccion
+                                ? ['nombre', 'textoGenerado'].includes(key)
+                                : !CAMPOS_OCULTOS_EN_EDICION.has(key))
+                              .map(key => (
                               <div className={`editor-field ${key === 'nombre' ? 'editor-field--ancho' : ''}`} key={key}>
                                 <label>{mapaNombresCampos[key] || key}</label>
                                 {key === 'nombre' ? (
@@ -412,10 +566,12 @@ export const PantallaValidacion: React.FC<PantallaValidacionProps> = ({
                   </React.Fragment>
                 );
               })}
-              {registros.length === 0 && (
+              {filasVisibles.length === 0 && (
                 <tr>
-                  <td colSpan={4 + columnasVisibles.length} style={{ textAlign: 'center', padding: '40px' }}>
-                    No hay datos cargados. Regrese al paso anterior.
+                  <td colSpan={(correccion ? 6 : 4) + columnasVisibles.length} style={{ textAlign: 'center', padding: '40px' }}>
+                    {correccion
+                      ? 'No hay constancias que coincidan con la búsqueda.'
+                      : 'No hay datos cargados. Regrese al paso anterior.'}
                   </td>
                 </tr>
               )}

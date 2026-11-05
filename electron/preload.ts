@@ -24,6 +24,10 @@ import type {
   EstadisticasEntrada,
   EstadisticasResultado,
   ListarEventosReimprimiblesEntrada,
+  ConstanciaCorreccion,
+  GuardarCorreccionConstanciaEntrada,
+  GenerarCorreccionesEntrada,
+  GenerarCorreccionesResultado,
 } from '../shared/types/ipc'
 import type { Evento } from '../shared/types/evento'
 
@@ -51,6 +55,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('pdf:generar', entrada),
   listarEventosReimprimibles: (entrada: ListarEventosReimprimiblesEntrada): Promise<Evento[]> =>
     ipcRenderer.invoke('evento:listarReimprimibles', entrada.tipoPlantilla),
+  listarConstanciasParaCorreccion: (folioEvento: string): Promise<ConstanciaCorreccion[]> =>
+    ipcRenderer.invoke('constancia:listarCorrecciones', folioEvento),
+  guardarCorreccionConstancia: (entrada: GuardarCorreccionConstanciaEntrada): Promise<ConstanciaCorreccion> =>
+    ipcRenderer.invoke('constancia:guardarCorreccion', entrada),
+  generarCorrecciones: (entrada: GenerarCorreccionesEntrada): Promise<GenerarCorreccionesResultado> =>
+    ipcRenderer.invoke('pdf:generarCorrecciones', entrada),
   seleccionarCarpetaDestino: (): Promise<string | null> =>
     ipcRenderer.invoke('pdf:seleccionarCarpeta'),
   previsualizarDocumento: (entrada: PrevisualizarEntrada): Promise<string> =>

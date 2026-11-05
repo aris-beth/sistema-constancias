@@ -32,7 +32,7 @@ Funciona 100 % en local: no necesita internet, no envía datos a ningún servido
 ## Qué hace
 
 - Lee un Excel con los participantes de un evento y valida cada fila (columnas obligatorias, roles, fechas, modalidad, categoría, ponencia).
-- Normaliza los nombres: mayúsculas, apellidos primero, grado académico abreviado (Dr., Mtro., Ing., Lic., etc.) y nivel de confianza del acomodo.
+- Normaliza los nombres conservando el orden capturado, aplica mayúsculas y abrevia grados académicos (Dr., Mtro., Ing., Lic., etc.). Marca confianza baja ante abreviaturas puntadas desconocidas, nombres de una sola palabra, grados múltiples o grupos unidos por «y»; la longitud del nombre y conectores como «de/del» no la reducen.
 - Redacta el texto de cada constancia según el rol (ponente, asistente, jurado, moderador, ganador, etc.) y la modalidad del evento. Admite texto personalizado por fila.
 - Distingue **constancia** de **reconocimiento**: a partir de cierto número de constancias por persona en un mismo evento (6 de fábrica, configurable) el documento cambia de encabezado.
 - Genera el folio del evento y un folio por documento.

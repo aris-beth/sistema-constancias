@@ -41,8 +41,8 @@ export interface ResultadoAutoajuste {
 
 // Sección "Manejo de casos extremos" del TDD.
 const NIVELES_NOMBRE: NivelAutoajuste[] = [
-  { limiteCaracteres: 40, tamanoFuentePt: 16, maxLineas: 1 },
-  { limiteCaracteres: 80, tamanoFuentePt: 14, maxLineas: 2 },
+  { limiteCaracteres: 42, tamanoFuentePt: 16, maxLineas: 1 },
+  { limiteCaracteres: 82, tamanoFuentePt: 14, maxLineas: 2 },
   { limiteCaracteres: 168, tamanoFuentePt: 11, maxLineas: 3 },
 ]
 
@@ -56,12 +56,8 @@ function obtenerReglasPorTipoCampo(tipoCampo: TipoCampoAutoajuste): NivelAutoaju
 }
 
 /**
- * Reparte una lista de "unidades" (palabras, o nombres ya separados por
- * comas) en exactamente min(maxGrupos, unidades.length) líneas contiguas,
- * eligiendo los cortes que minimizan la suma de cuadrados de los anchos
- * REALES de línea (incluyendo los separadores y la coma final de las
- * líneas intermedias). Es decir: el reparto más parejo posible sin cortar
- * una unidad (un nombre o una palabra) a la mitad.
+ * Reparte palabras completas en grupos contiguos, eligiendo los cortes que
+ * minimizan la suma de cuadrados de los anchos de línea.
  *
  * Se resuelve con programación dinámica (partición lineal): para el
  * tamaño de los textos de este sistema (decenas de unidades, máximo 3
@@ -69,14 +65,12 @@ function obtenerReglasPorTipoCampo(tipoCampo: TipoCampoAutoajuste): NivelAutoaju
  * garantiza el óptimo, de modo que nunca deja una línea con 3 nombres y
  * la siguiente con uno solo si existe un reparto mejor.
  *
- * @param separador   caracteres entre unidades de una misma línea (", " = 2, " " = 1)
- * @param comaAlFinal caracteres que se agregan al final de cada línea que NO es la última
+ * @param separador caracteres entre unidades de una misma línea
  */
 function particionarBalanceado(
   unidades: string[],
   maxGrupos: number,
   separador: number,
-  comaAlFinal: number,
 ): string[][] {
   const total = unidades.length
   if (total === 0) {
@@ -94,8 +88,7 @@ function particionarBalanceado(
   // Ancho impreso de la línea formada por unidades[desde..hasta).
   const anchoLinea = (desde: number, hasta: number): number => {
     const cantidad = hasta - desde
-    const base = acumulado[hasta] - acumulado[desde] + separador * (cantidad - 1)
-    return hasta < total ? base + comaAlFinal : base
+    return acumulado[hasta] - acumulado[desde] + separador * (cantidad - 1)
   }
 
   const INFINITO = Number.POSITIVE_INFINITY
@@ -134,12 +127,9 @@ function particionarBalanceado(
 }
 
 /**
- * Distribuye un texto en como máximo `maxLineas` líneas. Si el texto trae
- * comas (caso típico de una constancia grupal: "PÉREZ JUAN, LÓPEZ ANA,
- * RAMÍREZ LUIS"), reparte por esos nombres completos y deja la coma al
- * final de cada línea intermedia para que quede claro que el listado
- * continúa. Si no trae comas (un título de ponencia, o un solo nombre muy
- * largo), reparte por palabras.
+ * Distribuye un texto en como máximo `maxLineas` líneas. Las palabras nunca
+ * se dividen; en listas de participantes la coma se conserva junto a la
+ * última palabra de cada nombre, aunque el nombre continúe en otro renglón.
  */
 function distribuirEnLineas(texto: string, maxLineas: number): string[] {
   // Cualquier salto de línea, tabulador o espacio repetido (frecuentes en
@@ -153,29 +143,24 @@ function distribuirEnLineas(texto: string, maxLineas: number): string[] {
     return [textoLimpio]
   }
 
-  const esListaConComas = textoLimpio.includes(',')
-  const unidades = esListaConComas
-    ? textoLimpio
-        .split(',')
-        .map((segmento) => segmento.trim())
-        .filter((segmento) => segmento.length > 0)
-    : textoLimpio.split(' ').filter((palabra) => palabra.length > 0)
+  const nombres = textoLimpio.includes(',')
+    ? textoLimpio.split(',').map((nombre) => nombre.trim()).filter(Boolean)
+    : null
+  const unidades = nombres
+    ? nombres.flatMap((nombre, indice) => {
+        const palabras = nombre.split(' ').filter(Boolean)
+        if (indice < nombres.length - 1 && palabras.length > 0) {
+          palabras[palabras.length - 1] += ','
+        }
+        return palabras
+      })
+    : textoLimpio.split(' ').filter(Boolean)
 
   if (unidades.length <= 1) {
     return [textoLimpio]
   }
 
-  // Separador entre nombres: ", " (2 caracteres). Entre palabras: " " (1).
-  // En listas, cada línea intermedia termina con "," (1 carácter extra).
-  const grupos = esListaConComas
-    ? particionarBalanceado(unidades, maxLineas, 2, 1)
-    : particionarBalanceado(unidades, maxLineas, 1, 0)
-
-  return grupos.map((grupo, indice) => {
-    const esUltimoGrupo = indice === grupos.length - 1
-    const lineaUnida = esListaConComas ? grupo.join(', ') : grupo.join(' ')
-    return esListaConComas && !esUltimoGrupo ? `${lineaUnida},` : lineaUnida
-  })
+  return particionarBalanceado(unidades, maxLineas, 1).map((grupo) => grupo.join(' '))
 }
 
 /**

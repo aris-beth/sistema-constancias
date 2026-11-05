@@ -28,6 +28,14 @@ export const CATALOGO_ABREVIATURAS_BASE: EntradaAbreviatura[] = [
   { formaEncontrada: 'LICENCIADA', abreviaturaAceptada: 'LIC.' },
 ]
 
+function claveAbreviatura(texto: string): string {
+  return texto
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/[.\s]/g, '')
+}
+
 /**
  * Construye el mapa de búsqueda que usa el normalizador (token → abreviatura
  * aceptada). Acepta entradas adicionales (las que un usuario agregue después
@@ -39,7 +47,7 @@ export function construirMapaAbreviaturas(
 ): Map<string, string> {
   const mapa = new Map<string, string>()
   for (const entrada of [...CATALOGO_ABREVIATURAS_BASE, ...entradasAdicionales]) {
-    mapa.set(entrada.formaEncontrada.toUpperCase(), entrada.abreviaturaAceptada)
+    mapa.set(claveAbreviatura(entrada.formaEncontrada), entrada.abreviaturaAceptada)
   }
   return mapa
 }
