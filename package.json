@@ -1,6 +1,6 @@
 {
   "name": "sistema-constancias",
-  "version": "0.1.0",
+  "version": "2.0.0",
   "private": true,
   "description": "Sistema de generación automática de constancias y reconocimientos - Facultad de Ciencias de la Computación, BUAP",
   "main": "dist-electron/main.js",
@@ -15,6 +15,9 @@
   "build": {
     "directories": {
       "output": "release"
+    },
+    "win": {
+      "icon": "iconsist.ico"
     }
   },
   "dependencies": {

@@ -128,6 +128,7 @@ const App: React.FC = () => {
     nombreEvento: fila.nombreEvento,
     articuloEvento: fila.articuloEvento ?? null,
     fechaConstancia: fila.fechaConstancia,
+    duracion: fila.duracion,
     universidadOrigen: fila.universidadOrigen,
     modalidad: fila.modalidad,
     categoria: fila.categoria,

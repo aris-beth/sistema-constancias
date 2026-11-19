@@ -88,6 +88,7 @@ describe('validarFilaExcel', () => {
   it.each([
     ['2026-09-18', '18 de Septiembre de 2026'],
     ['18/09/2026', '18 de Septiembre de 2026'],
+    ['7 al 9 de diciembre de 2026', '7 al 9 de diciembre de 2026'],
   ])('formatea la fecha %s', (entrada, esperado) => {
     expect(formatearFechaConstancia(entrada)).toBe(esperado)
   })

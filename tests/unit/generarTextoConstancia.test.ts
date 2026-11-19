@@ -6,6 +6,7 @@ const datosBase = {
   participaComo: 'Organizador',
   nombreEvento: 'Congreso 2026',
   modalidad: 'Presencial CU' as const,
+  fechaConstancia: '3 de diciembre de 2026',
   nombrePonencia: null,
   textoPersonalizado: null,
   universidadOrigen: 'BUAP',

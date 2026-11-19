@@ -103,9 +103,9 @@ El archivo `.env.example` es solo una plantilla: hoy el sistema no usa claves ni
 npm run package:win
 ```
 
-- El proyecto no tiene configuración propia de electron-builder (no hay sección `build` en `package.json` ni archivo `electron-builder.yml`), así que se usan los valores por defecto: instalador NSIS con instalación por usuario y nombre tomado de `package.json`.
-- Con esa configuración por defecto, electron-builder deja el instalador dentro de la carpeta `dist/`, que es la misma donde Vite compila la interfaz. **Copia el instalador a otro lugar antes de volver a compilar**, porque `vite build` vacía `dist/`.
-- Si necesitas otro nombre, ícono, carpeta de salida o un instalador personalizado, agrega una sección `build` a `package.json` o un archivo `electron-builder.yml`.
+- electron-builder toma la configuración de `build` en `package.json` y genera los artefactos en `release/`.
+- Los instaladores se generan en `release/`, una carpeta separada de `dist/`, que Vite limpia durante la compilación.
+- El icono de Windows se configura en `build.win.icon`; actualmente apunta a `iconsist.ico` en la raíz del proyecto. Sustituye ese archivo por tu propio `.ico` si quieres cambiarlo y vuelve a ejecutar `npm run package:win`.
 
 ## Instalación y configuración en el equipo del usuario
 
@@ -235,7 +235,7 @@ Corre las pruebas antes de entregar cualquier cambio en `electron/business` o `e
 
 - **Documentos de diseño desactualizados.** El *Documento de diseño técnico* y los *Requerimientos* incluidos en el proyecto no reflejan por completo el programa actual. Por ejemplo, el QR ya no existe, y el sistema no deja avanzar mientras haya filas con error (no las omite). Ante cualquier diferencia, **manda el código**; el *Manual de usuario* sí está al día.
 - **Archivo `constancias.db` en la raíz del proyecto.** Está vacío (0 bytes) y no lo usa el programa, que guarda su base en la carpeta de datos del usuario. Puede eliminarse. Si alguna vez contiene datos reales, no debe entregarse ni subirse a un repositorio: `.gitignore` no lo excluye.
-- **Configuración del instalador.** No existe configuración propia de electron-builder (ver [Generar el instalador para Windows](#generar-el-instalador-para-windows)).
+- **Configuración del instalador.** Revisa la sección `build` de `package.json` y [Generar el instalador para Windows](#generar-el-instalador-para-windows).
 - **Sello con fondo opaco.** En el pie de las constancias regulares, la imagen del sello se dibuja encima de la frase institucional y la fecha, sin `z-index`. Con un sello de fondo transparente se ve bien, pero algunos visores de PDF o imágenes con fondo opaco pueden ocultar ese texto. Si ocurre, agrega `z-index` al texto en `plantillaDocumento.ts`, o usa un PNG con fondo transparente.
 - **Acentos en los nombres.** La normalización de nombres puede quitar los acentos. Si la Facultad los requiere, hay que revisarlos y corregirlos en la pantalla de Validación, o ajustar `normalizarNombre.ts`.
 - **Sin firma digital del instalador.** El instalador no está firmado, por lo que Windows puede mostrar una advertencia de SmartScreen la primera vez.

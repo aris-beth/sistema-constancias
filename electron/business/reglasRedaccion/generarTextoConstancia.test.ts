@@ -5,6 +5,7 @@ const datosBase = {
   participaComo: 'Organizador',
   nombreEvento: 'Congreso 2026',
   modalidad: 'Presencial CU' as const,
+  fechaConstancia: '3 de diciembre de 2026',
   nombrePonencia: null,
   textoPersonalizado: null,
   universidadOrigen: 'BUAP',
@@ -19,7 +20,7 @@ describe('generarTextoConstancia', () => {
         nombreEvento: 'Congreso 2026',
         articuloEvento: 'del',
       }).textoGenerado,
-    ).toBe('Por su participación del Congreso 2026, en la Facultad de Ciencias de la Computación.')
+    ).toBe('Por su participación del Congreso 2026, llevado a cabo el 3 de diciembre de 2026, en la Facultad de Ciencias de la Computación de la BUAP.')
   })
 
   it.each([
@@ -42,7 +43,7 @@ describe('generarTextoConstancia', () => {
 
   it('conserva la sede normal para participantes BUAP', () => {
     expect(generarTextoConstancia(datosBase).textoGenerado).toBe(
-      'Por ser Organizador, del Congreso 2026, en la Facultad de Ciencias de la Computación.',
+      'Por su valiosa labor como Organizador, del Congreso 2026, llevado a cabo el 3 de diciembre de 2026, en la Facultad de Ciencias de la Computación de la BUAP.',
     )
   })
 
@@ -56,7 +57,7 @@ describe('generarTextoConstancia', () => {
         }),
       ).toEqual({
         textoGenerado:
-            'Por ser Organizador, del Congreso 2026, en la Facultad de Ciencias de la Computación.',
+            'Por su valiosa labor como Organizador, del Congreso 2026, llevado a cabo el 3 de diciembre de 2026, en la Facultad de Ciencias de la Computación de la BUAP.',
         esPersonalizado: false,
         universidadExterna: null,
       })
@@ -72,9 +73,7 @@ describe('generarTextoConstancia', () => {
       modalidad,
     })
 
-    expect(resultado.textoGenerado.endsWith('en la Facultad de Ciencias de la Computación.') ||
-      resultado.textoGenerado.endsWith('de la Facultad de Ciencias de la Computación.') ||
-      resultado.textoGenerado.endsWith('en la Facultad de Ciencias de la Computación, campus CU2.')).toBe(true)
+    expect(resultado.textoGenerado.endsWith('en la Facultad de Ciencias de la Computación de la BUAP.')).toBe(true)
     },
   )
 
@@ -162,6 +161,20 @@ describe('generarTextoConstancia', () => {
     })
   })
 
+  it('genera el texto de asistente al taller con duración', () => {
+    expect(
+      generarTextoConstancia({
+        ...datosBase,
+        participaComo: 'Asistente al taller',
+        nombrePonencia: 'Diseño de interfaces',
+        fechaConstancia: '7 al 9 de diciembre de 2026',
+        duracion: '8 horas',
+      }).textoGenerado,
+    ).toBe(
+      'Por su asistencia al taller “Diseño de interfaces”, impartido en el marco del Congreso 2026, realizado del 7 al 9 de diciembre de 2026, con una duración de 8 horas, en la Facultad de Ciencias de la Computación de la BUAP.',
+    )
+  })
+
   it('usa GANADOR como descripción libre y omite "en el evento"', () => {
     expect(
       generarTextoConstancia({
@@ -170,7 +183,7 @@ describe('generarTextoConstancia', () => {
         nombrePonencia: 'mejor proyecto integrador',
       }).textoGenerado,
     ).toBe(
-      'Por ser mejor proyecto integrador en el Congreso 2026, en la Facultad de Ciencias de la Computación.',
+      'Por ser mejor proyecto integrador en el Congreso 2026, llevado a cabo el 3 de diciembre de 2026, en la Facultad de Ciencias de la Computación de la BUAP.',
     )
   })
 

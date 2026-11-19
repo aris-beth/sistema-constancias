@@ -9,6 +9,8 @@ export interface DatosTextoConstancia {
   nombreEvento: string
   modalidad: Modalidad
   nombrePonencia: string | null
+  fechaConstancia?: string | null
+  duracion?: string | null
   textoPersonalizado: string | null
   universidadOrigen: string | null
   /**
@@ -26,48 +28,54 @@ export interface ResultadoTextoConstancia {
 }
 
 const PLANTILLAS_POR_ROL: Record<string, string> = {
-  PARTICIPANTE: 'Por su participación {DEL_EVENTO}, {SEDE}.',
-  PARTICIPANTES: 'Por su participación {DEL_EVENTO}, {SEDE}.',
-  ORGANIZADOR: 'Por ser {PARTICIPA_COMO}, {DEL_EVENTO}, {SEDE}.',
-  ORGANIZADORA: 'Por ser {PARTICIPA_COMO}, {DEL_EVENTO}, {SEDE}.',
-  COLABORADOR: 'Por su participación como {PARTICIPA_COMO}, {DEL_EVENTO}, {SEDE}.',
-  COLABORADORA: 'Por su participación como {PARTICIPA_COMO}, {DEL_EVENTO}, {SEDE}.',
-  ASISTENTE: 'Por asistir {EN_EVENTO}, {SEDE}.',
-  ASISTENTES: 'Por asistir {EN_EVENTO}, {SEDE}.',
+  PARTICIPANTE: 'Por su participación {DEL_EVENTO}, llevado a cabo {FECHA_EVENTO}, {SEDE}.',
+  PARTICIPANTES: 'Por su participación {DEL_EVENTO}, llevado a cabo {FECHA_EVENTO}, {SEDE}.',
+  ORGANIZADOR: 'Por su valiosa labor como {PARTICIPA_COMO}, {DEL_EVENTO}, llevado a cabo {FECHA_EVENTO}, {SEDE}.',
+  ORGANIZADORA: 'Por su valiosa labor como {PARTICIPA_COMO}, {DEL_EVENTO}, llevado a cabo {FECHA_EVENTO}, {SEDE}.',
+  COLABORADOR: 'Por su participación como {PARTICIPA_COMO}, {DEL_EVENTO}, llevado a cabo {FECHA_EVENTO}, {SEDE}.',
+  COLABORADORA: 'Por su participación como {PARTICIPA_COMO}, {DEL_EVENTO}, llevado a cabo {FECHA_EVENTO}, {SEDE}.',
+  ASISTENTE: 'Por asistir {EN_EVENTO}, llevado a cabo {FECHA_EVENTO}, {SEDE}.',
+  ASISTENTES: 'Por asistir {EN_EVENTO}, llevado a cabo {FECHA_EVENTO}, {SEDE}.',
+  'ASISTENTE TALLER':
+    'Por su asistencia al taller “{PONENCIA}”, impartido en el marco {DEL_EVENTO}, realizado {FECHA_EVENTO}, con una duración de {DURACION}, {SEDE}.',
+  'ASISTENTES TALLER':
+    'Por su asistencia al taller “{PONENCIA}”, impartido en el marco {DEL_EVENTO}, realizado {FECHA_EVENTO}, con una duración de {DURACION}, {SEDE}.',
   'PONENTE CONFERENCIA':
-    'Por presentar la conferencia magistral “{PONENCIA}”, {EN_EVENTO}, {SEDE}.',
+    'Por presentar la conferencia magistral “{PONENCIA}”, {EN_EVENTO}, llevado a cabo {FECHA_EVENTO}, {SEDE}.',
   'PONENTES CONFERENCIA':
-    'Por presentar la conferencia magistral “{PONENCIA}”, {EN_EVENTO}, {SEDE}.',
-  PONENTE: 'Por haber impartido la ponencia “{PONENCIA}” {EN_EVENTO}, {SEDE}.',
-  PONENTES: 'Por haber impartido la ponencia “{PONENCIA}” {EN_EVENTO}, {SEDE}.',
+    'Por presentar la conferencia magistral “{PONENCIA}”, {EN_EVENTO}, llevado a cabo {FECHA_EVENTO}, {SEDE}.',
+  PONENTE: 'Por haber impartido la ponencia “{PONENCIA}” {EN_EVENTO}, llevado a cabo {FECHA_EVENTO}, {SEDE}.',
+  PONENTES: 'Por haber impartido la ponencia “{PONENCIA}” {EN_EVENTO}, llevado a cabo {FECHA_EVENTO}, {SEDE}.',
   // Vigente por decisión del cliente: el texto es fijo ("jurado"), NO usa el valor real de la columna PARTICIPA COMO, a diferencia de lo que indica el documento de requerimientos (tabla 3, sección 5.1). Confirmado — no modificar sin autorización.
-  JURADO: 'Por participar como jurado {EN_EVENTO}, {SEDE}.',
-  JURADOS: 'Por participar como jurados {EN_EVENTO}, {SEDE}.',
-  MODERADOR: 'Por participar como moderador {EN_EVENTO}, {SEDE}.',
-  MODERADORA: 'Por participar como moderadora {EN_EVENTO}, {SEDE}.',
-  MODERADORES: 'Por participar como moderadores {EN_EVENTO}, {SEDE}.',
-  MODERADORAS: 'Por participar como moderadoras {EN_EVENTO}, {SEDE}.',
+  JURADO: 'Por participar como jurado {EN_EVENTO}, llevado a cabo {FECHA_EVENTO}, {SEDE}.',
+  MODERADOR: 'Por participar como moderador {EN_EVENTO}, llevado a cabo {FECHA_EVENTO}, {SEDE}.',
+  MODERADORA: 'Por participar como moderadora {EN_EVENTO}, llevado a cabo {FECHA_EVENTO}, {SEDE}.',
+  MODERADORES: 'Por participar como moderadores {EN_EVENTO}, llevado a cabo {FECHA_EVENTO}, {SEDE}.',
+  MODERADORAS: 'Por participar como moderadoras {EN_EVENTO}, llevado a cabo {FECHA_EVENTO}, {SEDE}.',
   'MODERADOR DE PANEL':
-    'Por participar como moderador de panel, {EN_EVENTO}, {SEDE}.',
+    'Por participar como moderador de panel, {EN_EVENTO}, llevado a cabo {FECHA_EVENTO}, {SEDE}.',
   'MODERADORA DE PANEL':
-    'Por participar como moderadora de panel, {EN_EVENTO}, {SEDE}.',
+    'Por participar como moderadora de panel, {EN_EVENTO}, llevado a cabo {FECHA_EVENTO}, {SEDE}.',
   // Vigente por decisión del cliente: {PONENCIA} es la descripción libre de lo obtenido, no un "lugar", a diferencia de la redacción del documento de requerimientos (tabla 3, sección 5.1). Confirmado — no modificar sin autorización.
-  GANADOR: 'Por ser {PONENCIA} {EN_EVENTO}, {SEDE}.',
-  GANADORA: 'Por ser {PONENCIA} {EN_EVENTO}, {SEDE}.',
-  GANADORES: 'Por ser {PONENCIA} {EN_EVENTO}, {SEDE}.',
-  GANADORAS: 'Por ser {PONENCIA} {EN_EVENTO}, {SEDE}.',
-  'REVISOR DE LIBRO': 'Por participar como {PARTICIPA_COMO} {PONENCIA}, emanado {DEL_EVENTO}, {SEDE}.',
-  'REVISORA DE LIBRO': 'Por participar como {PARTICIPA_COMO} {PONENCIA}, emanado {DEL_EVENTO}, {SEDE}.',
-  'COMITE REVISOR': 'Por participar como integrante del comité revisor, {EN_EVENTO}, {SEDE}.',
+  GANADOR: 'Por ser {PONENCIA} {EN_EVENTO}, llevado a cabo {FECHA_EVENTO}, {SEDE}.',
+  GANADORA: 'Por ser {PONENCIA} {EN_EVENTO}, llevado a cabo {FECHA_EVENTO}, {SEDE}.',
+  GANADORES: 'Por ser {PONENCIA} {EN_EVENTO}, llevado a cabo {FECHA_EVENTO}, {SEDE}.',
+  GANADORAS: 'Por ser {PONENCIA} {EN_EVENTO}, llevado a cabo {FECHA_EVENTO}, {SEDE}.',
+  'REVISOR DE LIBRO':
+    'Por participar como {PARTICIPA_COMO} {PONENCIA}, emanado {DEL_EVENTO}, llevado a cabo {FECHA_EVENTO}, {SEDE}.',
+  'REVISORA DE LIBRO':
+    'Por participar como {PARTICIPA_COMO} {PONENCIA}, emanado {DEL_EVENTO}, llevado a cabo {FECHA_EVENTO}, {SEDE}.',
+  'COMITE REVISOR':
+    'Por participar como integrante del comité revisor, {EN_EVENTO}, llevado a cabo {FECHA_EVENTO}, {SEDE}.',
 }
 
 export const ROLES_RECONOCIDOS = Object.keys(PLANTILLAS_POR_ROL)
 
 const SEDES_POR_MODALIDAD: Record<string, string> = {
-  'PRESENCIAL CU': 'en la Facultad de Ciencias de la Computación',
-  'PRESENCIAL CU2': 'en la Facultad de Ciencias de la Computación, campus CU2',
-  'EN LINEA': 'de la Facultad de Ciencias de la Computación',
-  OTRO: 'de la Facultad de Ciencias de la Computación',
+  'PRESENCIAL CU': 'en la Facultad de Ciencias de la Computación de la BUAP',
+  'PRESENCIAL CU2': 'en la Facultad de Ciencias de la Computación de la BUAP',
+  'EN LINEA': 'en la Facultad de Ciencias de la Computación de la BUAP',
+  OTRO: 'en la Facultad de Ciencias de la Computación de la BUAP',
 }
 
 function normalizarClave(valor: string): string {
@@ -91,11 +99,27 @@ function esUniversidadExterna(universidadOrigen: string | null): boolean {
   return !esUniversidadBUAP(universidadOrigen)
 }
 
+function fraseFechaEvento(fechaConstancia: string | null | undefined): string {
+  const fecha = fechaConstancia?.trim() ?? ''
+  if (!fecha) {
+    throw new Error('La constancia requiere una fecha del evento.')
+  }
+  const sinPrefijo = /^del\s+/i.test(fecha) ? fecha.replace(/^del\s+/i, '') : fecha
+  const esRango = /^\d{1,2}\s+(?:al|a)\s+\d{1,2}\s+de\s+/i.test(sinPrefijo)
+  return esRango ? `del ${sinPrefijo}` : `el ${sinPrefijo}`
+}
+
 function reemplazarVariables(plantilla: string, datos: DatosTextoConstancia): string {
   const ponencia = datos.nombrePonencia?.trim()
   if (plantilla.includes('{PONENCIA}') && !ponencia) {
     throw new Error(
       `El rol "${datos.participaComo}" requiere un valor en NOMBRE DE LA PONENCIA.`,
+    )
+  }
+
+  if (plantilla.includes('{DURACION}') && !datos.duracion?.trim()) {
+    throw new Error(
+      `El rol "${datos.participaComo}" requiere un valor en la columna DURACION.`,
     )
   }
 
@@ -124,6 +148,8 @@ function reemplazarVariables(plantilla: string, datos: DatosTextoConstancia): st
 
   return plantilla
     .replaceAll('{PARTICIPA_COMO}', datos.participaComo.trim())
+    .replaceAll('{FECHA_EVENTO}', fraseFechaEvento(datos.fechaConstancia))
+    .replaceAll('{DURACION}', datos.duracion?.trim() ?? '')
     .replaceAll('{DEL_EVENTO}', eventoConArticulo)
     .replaceAll('{EN_EVENTO}', eventoConPreposicion)
     .replaceAll('{EVENTO}', nombreEvento)

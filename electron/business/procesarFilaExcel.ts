@@ -37,6 +37,7 @@ export interface FilaExcelProcesada {
   nombrePonencia: string | null
   nombreEvento: string
   fechaConstancia: string
+  duracion: string | null
   universidadOrigen: string | null
   modalidad: string
   textoPersonalizado: string | null
@@ -76,6 +77,7 @@ export function procesarFilaExcel(
     nombrePonencia: filaCruda.nombrePonencia,
     nombreEvento: filaCruda.nombreEvento,
     fechaConstancia: formatearFechaConstancia(filaCruda.fechaConstancia),
+    duracion: filaCruda.duracion,
     universidadOrigen: filaCruda.universidadOrigen,
     modalidad: filaCruda.modalidad,
     textoPersonalizado: filaCruda.textoPersonalizado,
@@ -116,6 +118,8 @@ export function procesarFilaExcel(
       nombreEvento: filaCruda.nombreEvento,
       modalidad: filaCruda.modalidad as Modalidad,
       nombrePonencia: filaCruda.nombrePonencia,
+      fechaConstancia: filaCruda.fechaConstancia,
+      duracion: filaCruda.duracion,
       textoPersonalizado: filaCruda.textoPersonalizado,
       universidadOrigen: filaCruda.universidadOrigen,
     })

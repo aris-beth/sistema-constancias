@@ -24,6 +24,17 @@ const NOMBRES_MESES = [
   'Diciembre',
 ]
 
+function extraerRangoFecha(valor: string): { inicio: number; fin: number; mes: number; anio: number } | null {
+  const texto = valor.trim().replace(/^del\s+/i, '')
+  const rango = /^(\d{1,2})\s+al\s+(\d{1,2})\s+de\s+([a-záéíóúüñ]+)\s+de\s+(\d{4})$/i.exec(texto)
+  if (!rango) return null
+  const mes = NOMBRES_MESES.findIndex(
+    (nombre) => normalizarValorCatalogo(nombre) === normalizarValorCatalogo(rango[3]),
+  ) + 1
+  if (mes < 1) return null
+  return { inicio: Number(rango[1]), fin: Number(rango[2]), mes, anio: Number(rango[4]) }
+}
+
 function normalizarValorCatalogo(valor: string): string {
   return valor
     .normalize('NFD')
@@ -70,6 +81,23 @@ function extraerPartesFecha(valor: string): { dia: number; mes: number; anio: nu
 }
 
 export function formatearFechaConstancia(valor: string): string {
+  const rango = extraerRangoFecha(valor)
+  if (rango) {
+    const inicio = new Date(Date.UTC(rango.anio, rango.mes - 1, rango.inicio))
+    const fin = new Date(Date.UTC(rango.anio, rango.mes - 1, rango.fin))
+    const inicioValido =
+      inicio.getUTCFullYear() === rango.anio &&
+      inicio.getUTCMonth() === rango.mes - 1 &&
+      inicio.getUTCDate() === rango.inicio
+    const finValido =
+      fin.getUTCFullYear() === rango.anio &&
+      fin.getUTCMonth() === rango.mes - 1 &&
+      fin.getUTCDate() === rango.fin
+    if (inicioValido && finValido && rango.inicio <= rango.fin) {
+      return `${rango.inicio} al ${rango.fin} de ${NOMBRES_MESES[rango.mes - 1].toLocaleLowerCase('es-MX')} de ${rango.anio}`
+    }
+  }
+
   const partes = extraerPartesFecha(valor)
   if (!partes) return valor.trim()
 
@@ -85,6 +113,21 @@ export function formatearFechaConstancia(valor: string): string {
 
 export function tieneFechaConstanciaValida(valor: string): boolean {
   const texto = valor.trim()
+  const rango = extraerRangoFecha(texto)
+  if (rango) {
+    const inicio = new Date(Date.UTC(rango.anio, rango.mes - 1, rango.inicio))
+    const fin = new Date(Date.UTC(rango.anio, rango.mes - 1, rango.fin))
+    return (
+      rango.inicio <= rango.fin &&
+      inicio.getUTCFullYear() === rango.anio &&
+      inicio.getUTCMonth() === rango.mes - 1 &&
+      inicio.getUTCDate() === rango.inicio &&
+      fin.getUTCFullYear() === rango.anio &&
+      fin.getUTCMonth() === rango.mes - 1 &&
+      fin.getUTCDate() === rango.fin
+    )
+  }
+
   if (!texto) return false
 
   const partes = extraerPartesFecha(texto)

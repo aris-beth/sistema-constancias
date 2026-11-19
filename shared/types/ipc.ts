@@ -24,6 +24,7 @@ export interface FilaProcesada {
   nombrePonencia: string | null
   nombreEvento: string
   fechaConstancia: string
+  duracion?: string | null
   universidadOrigen: string | null
   modalidad: string
   textoPersonalizado: string | null

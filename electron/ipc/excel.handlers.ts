@@ -34,6 +34,7 @@ function procesarFila(
     nombrePonencia: filaCruda.nombrePonencia,
     nombreEvento: filaCruda.nombreEvento,
     fechaConstancia: formatearFechaConstancia(filaCruda.fechaConstancia),
+    duracion: filaCruda.duracion,
     universidadOrigen: filaCruda.universidadOrigen,
     modalidad: filaCruda.modalidad,
     textoPersonalizado: filaCruda.textoPersonalizado,
@@ -58,6 +59,8 @@ function procesarFila(
       articuloEvento: base.articuloEvento,
       modalidad: filaCruda.modalidad as Parameters<typeof generarTextoConstancia>[0]['modalidad'],
       nombrePonencia: filaCruda.nombrePonencia,
+      fechaConstancia: filaCruda.fechaConstancia,
+      duracion: filaCruda.duracion,
       textoPersonalizado: filaCruda.textoPersonalizado,
       universidadOrigen: filaCruda.universidadOrigen,
     })
