@@ -20,7 +20,20 @@ describe('generarTextoConstancia', () => {
         nombreEvento: 'Congreso 2026',
         articuloEvento: 'del',
       }).textoGenerado,
-    ).toBe('Por su participación del Congreso 2026, llevado a cabo el 3 de diciembre de 2026, en la Facultad de Ciencias de la Computación de la BUAP.')
+    ).toBe('Por su participación en el Congreso 2026, llevado a cabo el 3 de diciembre de 2026, en la Facultad de Ciencias de la Computación de la BUAP.')
+  })
+
+  it.each([
+    ['1 al 6 de enero de 2026', 'llevado a cabo del 1 al 6 de enero de 2026'],
+    ['6 de enero de 2026', 'llevado a cabo el 6 de enero de 2026'],
+  ])('usa el artículo adecuado para la fecha %s', (fechaConstancia, textoEsperado) => {
+    expect(
+      generarTextoConstancia({
+        ...datosBase,
+        participaComo: 'Participante',
+        fechaConstancia,
+      }).textoGenerado,
+    ).toContain(textoEsperado)
   })
 
   it.each([
@@ -28,7 +41,7 @@ describe('generarTextoConstancia', () => {
     ['Ganadores', 'Por ser mejor proyecto en el Congreso 2026'],
     ['Ganadoras', 'Por ser mejor proyecto en el Congreso 2026'],
     ['Jurados', 'Por participar como jurados en el Congreso 2026'],
-    ['Asistentes', 'Por asistir en el Congreso 2026'],
+    ['Asistentes', 'Por su asistencia al Congreso 2026'],
     ['Moderador', 'Por participar como moderador en el Congreso 2026'],
   ])('reconoce y genera el rol variante %s', (participaComo, textoEsperado) => {
     expect(ROLES_RECONOCIDOS).toContain(participaComo.toLocaleUpperCase('es-MX'))
@@ -133,7 +146,7 @@ describe('generarTextoConstancia', () => {
           participaComo: 'Asistente',
           nombreEvento: '5.º Taller de Experiencias',
         }).textoGenerado,
-      ).toContain('Por asistir en el 5.º Taller de Experiencias,')
+      ).toContain('Por su asistencia al 5.º Taller de Experiencias,')
       expect(
         generarTextoConstancia({
           ...datosBase,
@@ -141,7 +154,7 @@ describe('generarTextoConstancia', () => {
           nombreEvento: '5.º Taller de Experiencias',
           articuloEvento: 'en la',
         }).textoGenerado,
-      ).toContain('Por asistir en la 5.º Taller de Experiencias,')
+      ).toContain('Por su asistencia a la 5.º Taller de Experiencias,')
     })
 
     it('si no puede decidir y la plantilla lo necesita, pide elegirlo', () => {
@@ -188,13 +201,10 @@ describe('generarTextoConstancia', () => {
   })
 
   it.each([
-    'Asistente',
-    'Ponente conferencia',
     'Ponente',
     'Jurado',
     'Moderador de panel',
     'Ganador',
-    'Comité revisor',
   ])('usa «en el Congreso» sin decir «en el evento» para %s', (participaComo) => {
     const texto = generarTextoConstancia({
       ...datosBase,

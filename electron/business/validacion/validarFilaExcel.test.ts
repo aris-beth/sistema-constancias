@@ -27,6 +27,7 @@ describe('validarFilaExcel', () => {
   })
 
   it.each([
+    ['presencial', 'Presencial'],
     ['presencial cu', 'Presencial CU'],
     ['PRESENCIAL CU2', 'Presencial CU2'],
     ['en linea', 'En línea'],

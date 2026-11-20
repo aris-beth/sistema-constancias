@@ -229,6 +229,11 @@ describe('plantillaDocumento', () => {
     expect(institucionParaDocumento(universidad)).toBeNull()
   })
 
+  it('usa el último día del rango en la fecha del pie del documento', () => {
+    expect(formatearFechaParaDocumento('1 al 5 de Enero de 2026')).toBe('5 de enero de 2026')
+    expect(formatearFechaParaDocumento('del 1 al 6 de enero de 2026')).toBe('6 de enero de 2026')
+  })
+
   it('omite instituciones vacías y conserva las externas', () => {
     expect(institucionParaDocumento('')).toBeNull()
     expect(institucionParaDocumento(null)).toBeNull()

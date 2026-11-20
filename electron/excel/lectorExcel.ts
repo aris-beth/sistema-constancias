@@ -20,6 +20,13 @@ const MAPA_ENCABEZADOS: Record<string, keyof FilaExcelCruda> = {
   'DURACIÓN': 'duracion',
   'HORAS': 'duracion',
   'HORAS ACREDITADAS': 'duracion',
+  'HORAS ACREDITADAS / DURACION': 'duracion',
+  'DURACION DEL TALLER': 'duracion',
+  'DURACION ACREDITADA': 'duracion',
+  'DURACION EN HORAS': 'duracion',
+  'DURACION (HORAS)': 'duracion',
+  'HORAS DE DURACION': 'duracion',
+  'HORAS DEL TALLER': 'duracion',
   'UNIVERSIDAD DE ORIGEN': 'universidadOrigen',
   MODALIDAD: 'modalidad',
   'TEXTO / CONSTANCIA PERSONALIZADA': 'textoPersonalizado',
@@ -111,6 +118,11 @@ export function leerArchivoExcel(rutaArchivo: string): FilaExcelCruda[] {
     const campo = MAPA_ENCABEZADOS[clave]
     if (campo) {
       indicePorCampo.set(campo, indice)
+    } else if (
+      !indicePorCampo.has('duracion') &&
+      (/\bDURACION\b/.test(clave) || /\bHORAS\b/.test(clave))
+    ) {
+      indicePorCampo.set('duracion', indice)
     }
   })
 

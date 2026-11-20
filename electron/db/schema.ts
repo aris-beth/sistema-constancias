@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS evento (
   folio TEXT UNIQUE NOT NULL,
   nombre_evento TEXT NOT NULL,
   fecha_constancia TEXT NOT NULL,
-  modalidad TEXT NOT NULL CHECK (modalidad IN ('Presencial CU', 'Presencial CU2', 'En línea', 'Otro')),
+  modalidad TEXT NOT NULL CHECK (modalidad IN ('Presencial', 'Presencial CU', 'Presencial CU2', 'En línea', 'Otro')),
   tipo_plantilla TEXT NOT NULL CHECK (tipo_plantilla IN ('regular', 'graduacion')),
   generacion TEXT,
   carrera TEXT,

@@ -1,7 +1,7 @@
 // src/pantallas/PantallaValidacion.tsx
 import React, { useEffect, useMemo, useState } from 'react';
 import '../styles/design-system.css';
-import { ARTICULOS_EVENTO, type ArticuloEvento } from '../../shared/types/evento';
+import { type ArticuloEvento } from '../../shared/types/evento';
 
 // Tipos base para la estructura de datos
 export interface RegistroExcel {
@@ -173,6 +173,12 @@ export const PantallaValidacion: React.FC<PantallaValidacionProps> = ({
   // El artículo ("del", "de la"…) es un dato del lote, igual que el nombre del evento.
   const articuloEvento: ArticuloEvento | '' =
     (registros.find((r) => r.articuloEvento)?.articuloEvento as ArticuloEvento | undefined) ?? '';
+  const generoEvento: 'masculino' | 'femenino' | '' =
+    articuloEvento === 'de la' || articuloEvento === 'de las' || articuloEvento === 'en la'
+      ? 'femenino'
+      : articuloEvento === 'del' || articuloEvento === 'de los' || articuloEvento === 'en el'
+        ? 'masculino'
+        : '';
 
   // Vista previa del folio automático (no guarda nada).
   useEffect(() => {
@@ -304,21 +310,32 @@ export const PantallaValidacion: React.FC<PantallaValidacionProps> = ({
             </span>
             {modo === 'regular' && (
               <>
-                <label htmlFor="articulo-evento" style={{ fontWeight: 600 }}>Forma de nombrar el evento:</label>
+                <label htmlFor="genero-evento" style={{ fontWeight: 600 }}>Forma de nombrar el evento:</label>
                 <select
-                  id="articulo-evento"
+                  id="genero-evento"
                   className="input-institucional"
-                  value={articuloEvento}
-                  onChange={(e) => onCambiarArticuloEvento((e.target.value || null) as ArticuloEvento | null)}
+                  value={generoEvento}
+                  onChange={(e) => {
+                    if (!e.target.value) {
+                      onCambiarArticuloEvento(null)
+                    } else if (e.target.value === 'femenino') {
+                      onCambiarArticuloEvento(
+                        articuloEvento === 'de las' ? 'de las' : 'de la',
+                      )
+                    } else {
+                      onCambiarArticuloEvento(
+                        articuloEvento === 'de los' ? 'de los' : 'del',
+                      )
+                    }
+                  }}
                 >
-                  <option value="">— Elegir —</option>
-                  {ARTICULOS_EVENTO.map((articulo) => (
-                    <option key={articulo} value={articulo}>{articulo}</option>
-                  ))}
+                  <option value="">— Elegir género —</option>
+                  <option value="masculino">Masculino</option>
+                  <option value="femenino">Femenino</option>
                 </select>
                 <span className="evento-ayuda">
-                  Organizador/a, colaborador/a y revisor/a de libro conservan «del/de la»; las demás redacciones usan «en el/en la» (o «en los/en las» en plural). La sede de la Facultad se mantiene también para participantes externos.
-                  {!articuloEvento && ' Si no se propone una forma automáticamente, elige una y pulsa «Actualizar cambios».'}
+                  Masculino o femenino determina cómo se nombra el evento en cada rol. Participantes y moderadores usan «en el/en la»; organizadores, colaboradores y revisores usan «del/de la»; asistentes usan «al/a la».
+                  {!articuloEvento && ' Elige una opción y pulsa «Actualizar cambios».'}
                 </span>
               </>
             )}

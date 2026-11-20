@@ -34,7 +34,7 @@ export interface DatosDocumentoPdf {
   ponencia: string | null
   texto: string
   fecha: string
-  /** Fragmentos del cuerpo que se imprimen en negritas (solo graduación). */
+  /** Fragmentos del cuerpo que se imprimen en negritas. */
   resaltar?: string[]
   /** Fragmento antes del cual el cuerpo hace salto de línea (solo graduación). */
   saltoAntesDe?: string | null
@@ -79,7 +79,12 @@ function escaparRegex(valor: string): string {
  * presentación, sin tocar el dato guardado.
  */
 export function formatearFechaParaDocumento(fecha: string): string {
-  return fecha.replace(/^(\d{1,2}) de ([A-Za-zÁÉÍÓÚáéíóúñÑ]+)( de \d{4})$/, (_todo, dia, mes, resto) =>
+  const rango = /^(?:del\s+)?\d{1,2}\s+al\s+(\d{1,2}) de ([A-Za-zÁÉÍÓÚáéíóúñÑ]+)( de \d{4})$/i.exec(fecha.trim())
+  if (rango) {
+    return `${rango[1]} de ${rango[2].toLocaleLowerCase('es-MX')}${rango[3]}`
+  }
+
+  return fecha.replace(/^(\d{1,2}) de ([A-Za-zÁÉÍÓÚáéíóúñÑ]+)( de \d{4})$/i, (_todo, dia, mes, resto) =>
     `${dia} de ${String(mes).toLocaleLowerCase('es-MX')}${resto}`,
   )
 }

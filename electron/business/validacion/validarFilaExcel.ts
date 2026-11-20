@@ -1,7 +1,7 @@
 import type { FilaExcelCruda } from '../../../shared/types/excel'
 import type { Modalidad } from '../../../shared/types/evento'
 
-const MODALIDADES_VALIDAS: Modalidad[] = ['Presencial CU', 'Presencial CU2', 'En línea', 'Otro']
+const MODALIDADES_VALIDAS: Modalidad[] = ['Presencial', 'Presencial CU', 'Presencial CU2', 'En línea', 'Otro']
 const CATEGORIAS_VALIDAS = new Set(['Maestro BUAP', 'Alumno BUAP', 'Externo'])
 
 export interface ResultadoValidacionFila {

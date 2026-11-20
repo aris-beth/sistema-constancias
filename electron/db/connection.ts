@@ -100,6 +100,36 @@ function ejecutarMigraciones(db: Database.Database): void {
     `)
   }
 
+  const definicionEvento = db.prepare(
+    "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'evento'",
+  ).get() as { sql: string } | undefined
+  if (definicionEvento?.sql && !definicionEvento.sql.includes("'Presencial'")) {
+    db.pragma('foreign_keys = OFF')
+    db.exec(`
+      BEGIN;
+      CREATE TABLE evento_modalidad_nueva (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        folio TEXT UNIQUE NOT NULL,
+        nombre_evento TEXT NOT NULL,
+        fecha_constancia TEXT NOT NULL,
+        modalidad TEXT NOT NULL CHECK (modalidad IN ('Presencial', 'Presencial CU', 'Presencial CU2', 'En línea', 'Otro')),
+        tipo_plantilla TEXT NOT NULL CHECK (tipo_plantilla IN ('regular', 'graduacion')),
+        generacion TEXT,
+        carrera TEXT,
+        articulo_evento TEXT,
+        forma_articulo_evento TEXT
+      );
+      INSERT INTO evento_modalidad_nueva
+        (id, folio, nombre_evento, fecha_constancia, modalidad, tipo_plantilla, generacion, carrera, articulo_evento, forma_articulo_evento)
+      SELECT id, folio, nombre_evento, fecha_constancia, modalidad, tipo_plantilla, generacion, carrera, articulo_evento, forma_articulo_evento
+      FROM evento;
+      DROP TABLE evento;
+      ALTER TABLE evento_modalidad_nueva RENAME TO evento;
+      COMMIT;
+    `)
+    db.pragma('foreign_keys = ON')
+  }
+
   const columnasConstancia = db.prepare('PRAGMA table_info(constancia)').all() as Array<{
     name: string
   }>

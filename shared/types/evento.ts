@@ -1,5 +1,6 @@
-export type Modalidad = 'Presencial CU' | 'Presencial CU2' | 'En línea' | 'Otro'
+export type Modalidad = 'Presencial' | 'Presencial CU' | 'Presencial CU2' | 'En línea' | 'Otro'
 export type TipoPlantilla = 'regular' | 'graduacion'
+export type GeneroEvento = 'masculino' | 'femenino'
 
 /** Formas de insertar el nombre del evento según el rol y su redacción. */
 export const ARTICULOS_EVENTO = ['del', 'de la', 'de los', 'de las', 'en el', 'en la'] as const

@@ -69,6 +69,7 @@ export function registroAFilaCruda(registro: RegistroExcel): FilaExcelCruda {
     nombrePonencia: textoOpcional(registro.nombrePonencia),
     nombreEvento: registro.nombreEvento ?? '',
     fechaConstancia: registro.fechaConstancia ?? '',
+    duracion: textoOpcional(registro.duracion),
     universidadOrigen: textoOpcional(registro.universidadOrigen),
     modalidad: registro.modalidad ?? '',
     textoPersonalizado: textoOpcional(registro.textoPersonalizado),

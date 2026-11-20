@@ -29,4 +29,13 @@ describe('conversión de nombres para revalidación', () => {
     expect(registroAFilaCrudaGraduacion(editado).nombreCompleto)
       .toBe('Dra. Ivonne Balderas Gutiérrez')
   })
+
+  it('conserva la duración de taller al reconstruir la fila para revalidación', () => {
+    const registroConDuracion: RegistroExcel = {
+      ...registroBase,
+      duracion: '20 horas',
+    }
+
+    expect(registroAFilaCruda(registroConDuracion).duracion).toBe('20 horas')
+  })
 })
