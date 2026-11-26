@@ -1,6 +1,7 @@
 // src/pantallas/PantallaCarga.tsx
 import React, { useState } from 'react';
 import type { Evento } from '../../shared/types/evento';
+import type { ModoGuardado } from '../../shared/types/ipc';
 import '../styles/design-system.css';
 
 export type ModoConstancia = 'regular' | 'graduacion';
@@ -15,6 +16,7 @@ interface PantallaCargaProps {
   manejarCargarGraduacion: () => void;
   listarEventosReimprimibles: () => Promise<Evento[]>;
   onReimprimir: (folio: string) => void;
+  onCargarEnEvento: (folio: string, modo: Extract<ModoGuardado, 'agregar' | 'reemplazar'>) => void;
   cargando?: boolean;
 }
 
@@ -25,10 +27,12 @@ export const PantallaCarga: React.FC<PantallaCargaProps> = ({
   manejarCargarGraduacion,
   listarEventosReimprimibles,
   onReimprimir,
+  onCargarEnEvento,
   cargando = false,
 }) => {
   const [eventosGuardados, setEventosGuardados] = useState<Evento[] | null>(null);
   const [folioSeleccionado, setFolioSeleccionado] = useState('');
+  const [accionEvento, setAccionEvento] = useState<'reimpresion' | 'tanda' | null>(null);
   const [cargandoEventos, setCargandoEventos] = useState(false);
   const [errorReimpresion, setErrorReimpresion] = useState<string | null>(null);
   const titulo = modo === 'graduacion' 
@@ -44,11 +48,12 @@ export const PantallaCarga: React.FC<PantallaCargaProps> = ({
     }
   };
 
-  const handleMostrarEventos = async () => {
+  const handleMostrarEventos = async (accion: 'reimpresion' | 'tanda') => {
     setCargandoEventos(true);
     setErrorReimpresion(null);
     setEventosGuardados(null);
     setFolioSeleccionado('');
+    setAccionEvento(accion);
     try {
       setEventosGuardados(await listarEventosReimprimibles());
     } catch (error) {
@@ -61,6 +66,7 @@ export const PantallaCarga: React.FC<PantallaCargaProps> = ({
   const handleCambiarModo = (nuevoModo: ModoConstancia) => {
     setEventosGuardados(null);
     setFolioSeleccionado('');
+    setAccionEvento(null);
     setErrorReimpresion(null);
     onCambiarModo(nuevoModo);
   };
@@ -101,20 +107,33 @@ export const PantallaCarga: React.FC<PantallaCargaProps> = ({
       </div>
 
       <section className="reimpresion-panel" aria-label="Reimpresión de lotes guardados">
-        <button
-          className="enlace-institucional"
-          onClick={handleMostrarEventos}
-          disabled={cargando || cargandoEventos}
-        >
-          {cargandoEventos ? 'Buscando eventos…' : 'Reimprimir lote guardado'}
-        </button>
+        <div className="carga-enlaces">
+          <button
+            className="enlace-institucional"
+            onClick={() => handleMostrarEventos('reimpresion')}
+            disabled={cargando || cargandoEventos}
+          >
+            {cargandoEventos && accionEvento === 'reimpresion' ? 'Buscando eventos…' : 'Reimprimir lote guardado'}
+          </button>
+          <button
+            className="enlace-institucional"
+            onClick={() => handleMostrarEventos('tanda')}
+            disabled={cargando || cargandoEventos}
+          >
+            {cargandoEventos && accionEvento === 'tanda' ? 'Buscando eventos…' : 'Agregar constancias a un evento existente'}
+          </button>
+        </div>
         {errorReimpresion && <p className="mensaje-error-carga" role="alert">{errorReimpresion}</p>}
         {eventosGuardados !== null && (
           eventosGuardados.length === 0 ? (
-            <p>No hay eventos guardados disponibles para reimprimir.</p>
+            <p>No hay eventos guardados disponibles para esta acción.</p>
           ) : (
             <div className="reimpresion-controles">
-              <label htmlFor="evento-reimpresion">Selecciona el evento que deseas reimprimir:</label>
+              <label htmlFor="evento-reimpresion">
+                {accionEvento === 'tanda'
+                  ? 'Selecciona el evento al que agregarás constancias o que deseas reemplazar:'
+                  : 'Selecciona el evento que deseas reimprimir:'}
+              </label>
               <select
                 id="evento-reimpresion"
                 value={folioSeleccionado}
@@ -127,13 +146,41 @@ export const PantallaCarga: React.FC<PantallaCargaProps> = ({
                   </option>
                 ))}
               </select>
-              <button
-                className="btn-institucional"
-                onClick={() => onReimprimir(folioSeleccionado)}
-                disabled={!folioSeleccionado}
-              >
-                CONTINUAR A REIMPRESIÓN
-              </button>
+              {accionEvento === 'tanda' ? (
+                <>
+                  <p>
+                    Agregar un lote de constancias conserva los documentos y folios existentes. Reemplazar elimina los registros anteriores del evento.
+                  </p>
+                  <div className="carga-enlaces">
+                    <button
+                      className="btn-institucional"
+                      onClick={() => onCargarEnEvento(folioSeleccionado, 'agregar')}
+                      disabled={!folioSeleccionado || cargando}
+                    >
+                      AGREGAR LOTE DE CONSTANCIAS
+                    </button>
+                    <button
+                      className="btn-institucional"
+                      onClick={() => {
+                        if (folioSeleccionado && window.confirm('Se eliminarán de la base de datos las constancias actuales de este evento. Si generas PDFs después en la misma carpeta, los archivos de roles coincidentes pueden sobrescribirse. ¿Deseas continuar?')) {
+                          onCargarEnEvento(folioSeleccionado, 'reemplazar');
+                        }
+                      }}
+                      disabled={!folioSeleccionado || cargando}
+                    >
+                      REEMPLAZAR EVENTO
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <button
+                  className="btn-institucional"
+                  onClick={() => onReimprimir(folioSeleccionado)}
+                  disabled={!folioSeleccionado}
+                >
+                  CONTINUAR A REIMPRESIÓN
+                </button>
+              )}
             </div>
           )
         )}

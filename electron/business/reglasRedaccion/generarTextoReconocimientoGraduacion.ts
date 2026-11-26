@@ -31,7 +31,11 @@ const PLANTILLAS_POR_SUBTIPO: Record<string, string> = {
   'INTEGRANTE DE GENERACION': 'Por ser integrante de la Generación {GENERACION} de la {CARRERA}.',
   'DISTINCION AL MERITO ACADEMICO':
     'Por obtener la Distinción al Mérito Académico en la {CARRERA}, {GENERACION}.',
-  'LABOR DOCENTE': 'Por su destacada labor docente, en favor de la Generación {GENERACION}.',
+  'LABOR DOCENTE': 'Por su destacada labor docente, en favor de\nla Generación {GENERACION}.',
+  'MADRINA DE GENERACION':
+    'Por la excelencia de su labor docente, gran calidad profesional y humana\nque inspiran a la comunidad universitaria a distinguirla como\nMADRINA de la Generación {GENERACION}',
+  'PADRINO DE GENERACION':
+    'Por la excelencia de su labor docente, gran calidad profesional y humana\nque inspiran a la comunidad universitaria a distinguirlo como\nPADRINO de la Generación {GENERACION}',
 }
 
 /** Catálogo base de subtipos (sección 4.1/5.2 de requerimientos). Se
@@ -42,6 +46,8 @@ export const SUBTIPOS_GRADUACION_RECONOCIDOS = [
   'Integrante de generación',
   'Distinción al Mérito Académico',
   'Labor docente',
+  'Madrina de generación',
+  'Padrino de generación',
 ]
 
 function normalizarClave(valor: string): string {
@@ -68,20 +74,15 @@ export function generarTextoReconocimientoGraduacion(
   if (!datos.generacion.trim()) {
     throw new Error('Falta la generación para redactar el reconocimiento de graduación.')
   }
-  if (!datos.carrera.trim()) {
-    throw new Error('Falta la carrera para redactar el reconocimiento de graduación.')
-  }
-
-  if (datos.plantillaPersonalizada?.trim()) {
-    return { textoGenerado: reemplazarVariables(datos.plantillaPersonalizada.trim(), datos) }
-  }
-
   const claveSubtipo = normalizarClave(datos.subtipo)
-  const plantilla = PLANTILLAS_POR_SUBTIPO[claveSubtipo]
+  const plantilla = datos.plantillaPersonalizada?.trim() || PLANTILLAS_POR_SUBTIPO[claveSubtipo]
   if (!plantilla) {
     throw new Error(
       `El subtipo "${datos.subtipo}" no está en el catálogo de reconocimientos de graduación.`,
     )
+  }
+  if (plantilla.includes('{CARRERA}') && !datos.carrera.trim()) {
+    throw new Error('Falta la carrera para redactar este reconocimiento de graduación.')
   }
 
   return { textoGenerado: reemplazarVariables(plantilla, datos) }

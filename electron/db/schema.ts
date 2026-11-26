@@ -15,6 +15,16 @@ CREATE TABLE IF NOT EXISTS evento (
   forma_articulo_evento TEXT CHECK (forma_articulo_evento IS NULL OR forma_articulo_evento IN ('en el', 'en la'))
 );
 
+CREATE TABLE IF NOT EXISTS tanda_importacion (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  evento_id INTEGER NOT NULL REFERENCES evento(id) ON DELETE CASCADE,
+  numero_tanda INTEGER NOT NULL,
+  huella_contenido TEXT NOT NULL,
+  fecha_generacion TEXT NOT NULL,
+  UNIQUE (evento_id, numero_tanda),
+  UNIQUE (evento_id, huella_contenido)
+);
+
 CREATE TABLE IF NOT EXISTS participante (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   nombre_original TEXT NOT NULL,
@@ -43,7 +53,8 @@ CREATE TABLE IF NOT EXISTS constancia (
   fecha_generacion TEXT NOT NULL,
   folio_interno TEXT UNIQUE NOT NULL,
   nombre_impreso TEXT,
-  estado TEXT NOT NULL DEFAULT 'generada' CHECK (estado IN ('pendiente', 'generada'))
+  estado TEXT NOT NULL DEFAULT 'generada' CHECK (estado IN ('pendiente', 'generada')),
+  tanda_id INTEGER REFERENCES tanda_importacion(id)
 );
 
 CREATE TABLE IF NOT EXISTS constancia_participante (

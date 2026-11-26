@@ -5,7 +5,8 @@ import { normalizarCategoria, normalizarModalidad } from '../../business/validac
 import { generarFolioAutomatico } from './folio.repository'
 import { obtenerConfiguracionReglas } from './configuracionReglas.repository'
 import { articuloEventoPersistido } from '../../business/reglasRedaccion/articuloEvento'
-import type { GuardarLoteResultado, FilaProcesada } from '../../../shared/types/ipc'
+import type { GuardarLoteResultado, FilaProcesada, ModoGuardado } from '../../../shared/types/ipc'
+import { crearTanda } from './tanda.repository'
 
 function normalizarClave(valor: string): string {
   return valor.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toUpperCase()
@@ -27,6 +28,7 @@ function validarFilaGuardable(fila: FilaProcesada): asserts fila is FilaProcesad
 export function guardarLoteRegular(
   folioEvento: string | null,
   filas: FilaProcesada[],
+  modo: ModoGuardado = 'reemplazar',
 ): GuardarLoteResultado {
   // Si no se indica folio, se genera automáticamente al guardar.
   const folioSolicitado = folioEvento?.trim() || null
@@ -47,34 +49,58 @@ export function guardarLoteRegular(
       generarFolioAutomatico(primera.nombreEvento.trim(), primera.fechaConstancia.trim())
     const { articuloEvento, formaArticuloEvento } = articuloEventoPersistido(primera.articuloEvento)
     const eventoExistente = db
-      .prepare('SELECT id, tipo_plantilla FROM evento WHERE folio = ?')
-      .get(folio) as { id: number; tipo_plantilla: string } | undefined
+      .prepare('SELECT id, tipo_plantilla, nombre_evento, fecha_constancia, modalidad FROM evento WHERE folio = ?')
+      .get(folio) as {
+        id: number
+        tipo_plantilla: string
+        nombre_evento: string
+        fecha_constancia: string
+        modalidad: string
+      } | undefined
     let eventoId: number
 
     if (eventoExistente) {
       if (eventoExistente.tipo_plantilla !== 'regular') {
         throw new Error(`El folio "${folio}" pertenece a un evento de graduación.`)
       }
+      if (modo === 'nuevo') {
+        throw new Error(`Ya existe un evento con el folio "${folio}". Selecciónalo para agregar un lote de constancias o reemplazarlo.`)
+      }
       eventoId = eventoExistente.id
-      db.prepare(
-        `UPDATE evento
-         SET nombre_evento = ?, fecha_constancia = ?, modalidad = ?,
-             articulo_evento = ?, forma_articulo_evento = ?
-         WHERE id = ?`,
-      ).run(
-        primera.nombreEvento.trim(),
-        primera.fechaConstancia.trim(),
-        normalizarModalidad(primera.modalidad),
-        articuloEvento,
-        formaArticuloEvento,
-        eventoId,
-      )
-      db.prepare(
-        `DELETE FROM constancia_participante
-         WHERE constancia_id IN (SELECT id FROM constancia WHERE evento_id = ?)`,
-      ).run(eventoId)
-      db.prepare('DELETE FROM constancia WHERE evento_id = ?').run(eventoId)
+      if (modo === 'agregar') {
+        const modalidad = normalizarModalidad(primera.modalidad)
+        if (
+          normalizarClave(eventoExistente.nombre_evento) !== normalizarClave(primera.nombreEvento) ||
+          eventoExistente.fecha_constancia !== primera.fechaConstancia ||
+          eventoExistente.modalidad !== modalidad
+        ) {
+          throw new Error('Los datos generales de este lote de constancias no coinciden con el evento seleccionado. Verifica el nombre, fecha y modalidad.')
+        }
+      } else {
+        db.prepare(
+          `UPDATE evento
+           SET nombre_evento = ?, fecha_constancia = ?, modalidad = ?,
+               articulo_evento = ?, forma_articulo_evento = ?
+           WHERE id = ?`,
+        ).run(
+          primera.nombreEvento.trim(),
+          primera.fechaConstancia.trim(),
+          normalizarModalidad(primera.modalidad),
+          articuloEvento,
+          formaArticuloEvento,
+          eventoId,
+        )
+        db.prepare(
+          `DELETE FROM constancia_participante
+           WHERE constancia_id IN (SELECT id FROM constancia WHERE evento_id = ?)`,
+        ).run(eventoId)
+        db.prepare('DELETE FROM constancia WHERE evento_id = ?').run(eventoId)
+        db.prepare('DELETE FROM tanda_importacion WHERE evento_id = ?').run(eventoId)
+      }
     } else {
+      if (modo === 'agregar') {
+        throw new Error(`No se encontró el evento "${folio}" para agregar el lote de constancias.`)
+      }
       const eventoResultado = db
         .prepare(
           `INSERT INTO evento (
@@ -174,10 +200,11 @@ export function guardarLoteRegular(
       folio,
       obtenerConfiguracionReglas().maxConstanciasPorPersona,
     )
+    const tanda = crearTanda(db, eventoId, folio, filasGuardables)
     const insertarConstancia = db.prepare(
       `INSERT INTO constancia (evento_id, rol_id, ponencia, texto_generado, es_personalizado,
-       tipo_documento, numero_para_persona_evento, universidad_origen, fecha_generacion, folio_interno, estado)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'generada')`,
+       tipo_documento, numero_para_persona_evento, universidad_origen, fecha_generacion, folio_interno, estado, tanda_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'generada', ?)`,
     )
     const insertarRelacion = db.prepare(
       'INSERT INTO constancia_participante (constancia_id, participante_id) VALUES (?, ?)',
@@ -185,7 +212,7 @@ export function guardarLoteRegular(
     const foliosInternos: string[] = []
     let reconocimientosCreados = 0
     for (const [indice, constancia] of decisiones.constancias.entries()) {
-      const folioInterno = `${folio}-${String(indice + 1).padStart(4, '0')}`
+      const folioInterno = `${folio}-${String(tanda.siguienteFolioInterno + indice).padStart(4, '0')}`
       const resultado = insertarConstancia.run(
         eventoId,
         constancia.rolId,
@@ -197,6 +224,7 @@ export function guardarLoteRegular(
         constancia.universidadOrigen,
         new Date().toISOString(),
         folioInterno,
+        tanda.id,
       )
       for (const participanteId of constancia.participanteIds) {
         insertarRelacion.run(Number(resultado.lastInsertRowid), participanteId)
@@ -212,6 +240,8 @@ export function guardarLoteRegular(
       reconocimientosCreados,
       constanciasPendientes: filas.length - filasValidas.length,
       foliosInternos,
+      tandaId: tanda.id,
+      numeroTanda: tanda.numero,
     }
   })
 

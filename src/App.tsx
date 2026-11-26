@@ -21,6 +21,7 @@ import type {
   FilaProcesada,
   FilaProcesadaGraduacion,
   GenerarCorreccionesResultado,
+  ModoGuardado,
 } from '../shared/types/ipc';
 import type { ArticuloEvento, Evento } from '../shared/types/evento';
 import './styles/design-system.css';
@@ -53,6 +54,9 @@ const App: React.FC = () => {
   // Folio con el que el lote ya quedó guardado en la base. Sirve para que un
   // reintento (p. ej. si falló solo el PDF) no vuelva a reemplazar el lote.
   const [folioPersistido, setFolioPersistido] = useState<string | null>(null);
+  const [modoGuardado, setModoGuardado] = useState<ModoGuardado>('nuevo');
+  const [tandaId, setTandaId] = useState<number | null>(null);
+  const [numeroTanda, setNumeroTanda] = useState<number | null>(null);
   const [esReimpresion, setEsReimpresion] = useState(false);
   const [correccionActiva, setCorreccionActiva] = useState<{
     folioEvento: string
@@ -169,7 +173,7 @@ const App: React.FC = () => {
     setMensajeActualizacion(null);
   };
 
-  const manejarCargarExcel = async () => {
+  const manejarCargarExcel = async (modo: ModoGuardado = 'nuevo', folioDestino?: string) => {
     if (cargandoArchivo) return;
     setCargandoArchivo(true);
     setErrorCarga(null);
@@ -178,7 +182,10 @@ const App: React.FC = () => {
       if (!resultado) return; // el usuario canceló el diálogo nativo
       reiniciarEdicion();
       setFolioPersistido(null);
-      setFolioEvento('');
+      setFolioEvento(modo === 'nuevo' ? '' : folioDestino ?? '');
+      setModoGuardado(modo);
+      setTandaId(null);
+      setNumeroTanda(null);
       setEsReimpresion(false);
       setResultadoGeneracion(null);
       setRegistros(resultado.filas.map(filaARegistro));
@@ -192,7 +199,7 @@ const App: React.FC = () => {
     }
   };
 
-  const manejarCargarGraduacion = async () => {
+  const manejarCargarGraduacion = async (modo: ModoGuardado = 'nuevo', folioDestino?: string) => {
     if (cargandoArchivo) return;
     setCargandoArchivo(true);
     setErrorCarga(null);
@@ -201,7 +208,10 @@ const App: React.FC = () => {
       if (!resultado) return; // el usuario canceló el diálogo nativo
       reiniciarEdicion();
       setFolioPersistido(null);
-      setFolioEvento('');
+      setFolioEvento(modo === 'nuevo' ? '' : folioDestino ?? '');
+      setModoGuardado(modo);
+      setTandaId(null);
+      setNumeroTanda(null);
       setEsReimpresion(false);
       setResultadoGeneracion(null);
       setRegistros(resultado.filas.map(filaGraduacionARegistro));
@@ -476,6 +486,9 @@ const App: React.FC = () => {
   const manejarReimprimirEvento = (folio: string) => {
     setFolioEvento(folio);
     setFolioPersistido(folio);
+    setModoGuardado('nuevo');
+    setTandaId(null);
+    setNumeroTanda(null);
     setEsReimpresion(true);
     setResultadoGeneracion(null);
     setPasoConstancias('generar');
@@ -487,19 +500,24 @@ const App: React.FC = () => {
     setResultadoGeneracion(null);
 
     try {
-      // 1) Guardar el lote. Un folio ya existente reemplaza sus constancias
-      // para permitir volver a generar el evento después de editar el Excel.
+      // 1) Persistir el evento o lote de constancias antes de generar sus PDFs.
       let folio = folioEvento.trim();
+      let idTanda = tandaId;
       const guardarLote = async (): Promise<string> => {
         const guardado = modoConstancia === 'regular'
           ? await window.electronAPI.guardarLote({
               folioEvento: folio || null,
               filas: registros.map((r) => registroAFila(r, errores)),
+              modo: modoGuardado,
             })
           : await window.electronAPI.guardarGraduacion({
               folioEvento: folio || null,
               filas: registros.map((r) => registroAFilaGraduacion(r, errores)),
+              modo: modoGuardado,
             });
+        idTanda = guardado.tandaId;
+        setTandaId(guardado.tandaId);
+        setNumeroTanda(guardado.numeroTanda);
         return guardado.folioEvento;
       };
       if (folioPersistido === null || folioPersistido !== folio) {
@@ -511,7 +529,11 @@ const App: React.FC = () => {
       }
 
       // 2) Generar los PDFs en la carpeta elegida.
-      const pdfs = await window.electronAPI.generarPdfs({ folioEvento: folio, carpetaDestino: rutaSalida });
+      const pdfs = await window.electronAPI.generarPdfs({
+        folioEvento: folio,
+        carpetaDestino: rutaSalida,
+        ...(!esReimpresion && idTanda !== null ? { tandaId: idTanda } : {}),
+      });
       setResultadoGeneracion({
         rolesExitosos: pdfs.roles.map((r) => ({ rol: r.rol, cantidad: r.cantidad })),
         errores: pdfs.errores.map((e) => ({
@@ -559,6 +581,13 @@ const App: React.FC = () => {
               manejarCargarGraduacion={manejarCargarGraduacion}
               listarEventosReimprimibles={listarEventosParaReimpresion}
               onReimprimir={manejarReimprimirEvento}
+              onCargarEnEvento={(folio, modo) => {
+                if (modoConstancia === 'regular') {
+                  void manejarCargarExcel(modo, folio);
+                } else {
+                  void manejarCargarGraduacion(modo, folio);
+                }
+              }}
               cargando={cargandoArchivo}
             />
             {errorCarga && <p className="mensaje-error-carga">{errorCarga}</p>}
@@ -608,8 +637,11 @@ const App: React.FC = () => {
             rutaSalida={rutaSalida}
             isGenerando={generando}
             resultados={resultadoGeneracion}
+            modoGuardado={modoGuardado}
+            folioEvento={folioEvento}
             onExaminarCarpeta={manejarExaminarCarpeta}
             onGenerar={manejarGenerar}
+            numeroTanda={!esReimpresion ? numeroTanda : null}
           />
         );
       default:

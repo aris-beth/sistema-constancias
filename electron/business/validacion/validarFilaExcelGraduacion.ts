@@ -28,7 +28,14 @@ export function validarFilaExcelGraduacion(
     errores.push(`${prefijo}: el subtipo '${fila.subtipo}' no está en el catálogo de graduación.`)
   }
   if (!fila.generacion.trim()) errores.push(`${prefijo}: falta la generación.`)
-  if (!fila.carrera.trim()) errores.push(`${prefijo}: falta la carrera.`)
+  const subtipo = normalizarClave(fila.subtipo)
+  const carreraNoRequerida =
+    subtipo.includes('LABOR DOCENTE') ||
+    subtipo === 'MADRINA DE GENERACION' ||
+    subtipo === 'PADRINO DE GENERACION'
+  if (!carreraNoRequerida && !fila.carrera.trim()) {
+    errores.push(`${prefijo}: falta la carrera.`)
+  }
   if (!tieneFechaConstanciaValida(fila.fecha)) {
     errores.push(`${prefijo}: la fecha de graduación no es válida.`)
   }

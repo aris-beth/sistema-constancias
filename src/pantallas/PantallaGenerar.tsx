@@ -1,4 +1,5 @@
 import React from 'react';
+import type { ModoGuardado } from '../../shared/types/ipc';
 import '../styles/design-system.css';
 
 export interface ResumenGeneracion {
@@ -13,6 +14,9 @@ interface PantallaGenerarProps {
   rutaSalida: string;
   isGenerando: boolean;
   resultados: ResumenGeneracion | null;
+  modoGuardado: ModoGuardado;
+  folioEvento: string;
+  numeroTanda?: number | null;
   onExaminarCarpeta: () => void;
   onGenerar: () => void;
 }
@@ -21,11 +25,29 @@ export const PantallaGenerar: React.FC<PantallaGenerarProps> = ({
   rutaSalida,
   isGenerando,
   resultados,
+  modoGuardado,
+  folioEvento,
+  numeroTanda = null,
   onExaminarCarpeta,
   onGenerar
 }) => {
   return (
     <div className="generar-container">
+      {modoGuardado === 'agregar' && (
+        <p role="status">
+          Se agregará un lote de constancias al evento {folioEvento}. Las constancias y folios anteriores se conservarán; los nuevos PDFs se guardarán por separado.
+        </p>
+      )}
+      {modoGuardado === 'reemplazar' && (
+        <p role="alert">
+          Al generar, las constancias actuales del evento {folioEvento} se reemplazarán en la base de datos. Los PDFs ya guardados en disco no se borrarán.
+        </p>
+      )}
+      {numeroTanda !== null && modoGuardado !== 'reemplazar' && (
+        <p role="status">
+          Se guardará y generará únicamente el lote de constancias {numeroTanda}.
+        </p>
+      )}
       {/* Selector de Carpeta */}
       <div className="carpeta-box">
         <label>Carpeta donde se guardará(n) el(los) archivo(s) final:</label>

@@ -10,6 +10,9 @@ function validarEntrada(entrada: GuardarLoteEntrada): void {
   if (entrada.folioEvento != null && typeof entrada.folioEvento !== 'string') {
     throw new Error('El folio del evento no es válido.')
   }
+  if (entrada.modo !== undefined && !['nuevo', 'agregar', 'reemplazar'].includes(entrada.modo)) {
+    throw new Error('El modo de guardado no es válido.')
+  }
   if (!Array.isArray(entrada.filas)) {
     throw new Error('La solicitud no contiene filas para guardar.')
   }
@@ -21,7 +24,7 @@ export function registrarManejadorGuardarLote(): void {
     async (_evento, entrada: GuardarLoteEntrada): Promise<GuardarLoteResultado> => {
       validarEntrada(entrada)
       try {
-        return guardarLoteRegular(entrada.folioEvento, entrada.filas)
+        return guardarLoteRegular(entrada.folioEvento, entrada.filas, entrada.modo)
       } catch (error) {
         throw new Error(error instanceof Error ? error.message : String(error))
       }

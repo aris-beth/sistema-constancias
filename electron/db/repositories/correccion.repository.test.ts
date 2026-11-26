@@ -20,7 +20,10 @@ function crearEvento(folio: string): { constanciaId: number; otroId: number } {
     `INSERT INTO evento (folio, nombre_evento, fecha_constancia, modalidad, tipo_plantilla)
      VALUES (?, 'Evento de prueba', '19 de Octubre de 2026', 'Otro', 'regular')`,
   ).run(folio).lastInsertRowid)
-  const rolId = Number(db.prepare(
+  const rolExistente = db.prepare('SELECT id FROM rol WHERE nombre_rol = ?').get('Asistente') as
+    | { id: number }
+    | undefined
+  const rolId = rolExistente?.id ?? Number(db.prepare(
     "INSERT INTO rol (nombre_rol, plantilla_texto) VALUES ('Asistente', 'Texto base')",
   ).run().lastInsertRowid)
   const personaId = Number(db.prepare(

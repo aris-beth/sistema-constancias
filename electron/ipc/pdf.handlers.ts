@@ -73,7 +73,7 @@ async function generarPrevisualizacion(entrada: PrevisualizarEntrada): Promise<s
       ponencia: null,
       texto: fila.textoGenerado ?? '',
       fecha: fila.fecha,
-      ...opcionesCuerpoGraduacion(fila.generacion, fila.carrera),
+      ...opcionesCuerpoGraduacion(fila.generacion, fila.carrera, fila.textoGenerado ?? ''),
     }
     const { recursos } = await armarRecursos(carpetaResources(), null)
     return crearHtmlDocumento(
@@ -137,7 +137,9 @@ export function registrarManejadorGenerarPdfs(): void {
         ponencia: documento.ponencia,
         texto: documento.textoGenerado,
         fecha: documento.fechaConstancia,
-        ...(esGraduacion ? opcionesCuerpoGraduacion(evento.generacion, evento.carrera) : {}),
+        ...(esGraduacion
+          ? opcionesCuerpoGraduacion(evento.generacion, evento.carrera, documento.textoGenerado)
+          : {}),
       }))
       const sello = obtenerConfiguracionSello()
       const resultado = await generarPdfsCorrecciones(
@@ -170,6 +172,16 @@ export function registrarManejadorGenerarPdfs(): void {
       const carpetaDestino = entrada.carpetaDestino?.trim() || (await elegirCarpeta())
       if (!carpetaDestino) throw new Error('No se seleccionó una carpeta de destino.')
 
+      const tandaId = entrada.tandaId
+      let numeroTanda: number | undefined
+      if (tandaId !== undefined) {
+        const tanda = obtenerBaseDeDatos()
+          .prepare('SELECT numero_tanda FROM tanda_importacion WHERE id = ? AND evento_id = ?')
+          .get(tandaId, evento.id) as { numero_tanda: number } | undefined
+        if (!tanda) throw new Error('El lote de constancias seleccionado no pertenece al evento indicado.')
+        numeroTanda = tanda.numero_tanda
+      }
+
       const filas = obtenerBaseDeDatos()
         .prepare(
           `SELECT r.nombre_rol, c.folio_interno, c.tipo_documento, c.ponencia, c.texto_generado,
@@ -181,12 +193,17 @@ export function registrarManejadorGenerarPdfs(): void {
            JOIN constancia_participante cp ON cp.constancia_id = c.id
            JOIN participante p ON p.id = cp.participante_id
            WHERE c.evento_id = ? AND c.estado = 'generada'
+             AND (? IS NULL OR c.tanda_id = ?)
            ORDER BY r.nombre_rol, c.id, p.id`,
         )
-        .all(evento.id) as FilaPdf[]
+        .all(evento.id, tandaId ?? null, tandaId ?? null) as FilaPdf[]
 
+      if (filas.length === 0) {
+        throw new Error(tandaId === undefined
+          ? 'El evento no tiene documentos generados para reimprimir.'
+          : 'El lote de constancias seleccionado no contiene documentos generados.')
+      }
       const esGraduacion = evento.tipoPlantilla === 'graduacion'
-      const extraGraduacion = esGraduacion ? opcionesCuerpoGraduacion(evento.generacion, evento.carrera) : {}
       const gruposMap = new Map<string, GrupoPdf>()
       for (const fila of filas) {
         const grupo = gruposMap.get(fila.nombre_rol) ?? { nombreRol: fila.nombre_rol, documentos: [] }
@@ -203,7 +220,9 @@ export function registrarManejadorGenerarPdfs(): void {
             ponencia: fila.ponencia,
             texto: fila.texto_generado,
             fecha: fila.fecha_constancia,
-            ...extraGraduacion,
+            ...(esGraduacion
+              ? opcionesCuerpoGraduacion(evento.generacion, evento.carrera, fila.texto_generado)
+              : {}),
           })
         } else if (!fila.nombre_impreso) {
           documento.nombre = `${documento.nombre}, ${nombre}`
@@ -218,6 +237,7 @@ export function registrarManejadorGenerarPdfs(): void {
         carpetaDestino,
         sello,
         obtenerConfiguracionFirmantesGraduacion(),
+        numeroTanda,
       )
 
       const advertencias = [...resultado.advertencias]

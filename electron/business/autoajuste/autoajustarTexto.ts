@@ -42,7 +42,9 @@ export interface ResultadoAutoajuste {
 // Sección "Manejo de casos extremos" del TDD.
 const NIVELES_NOMBRE: NivelAutoajuste[] = [
   { limiteCaracteres: 42, tamanoFuentePt: 16, maxLineas: 1 },
-  { limiteCaracteres: 82, tamanoFuentePt: 14, maxLineas: 2 },
+  { limiteCaracteres: 60, tamanoFuentePt: 14, maxLineas: 1 },
+  { limiteCaracteres: 78, tamanoFuentePt: 12, maxLineas: 1 },
+  { limiteCaracteres: 110, tamanoFuentePt: 11, maxLineas: 2 },
   { limiteCaracteres: 168, tamanoFuentePt: 11, maxLineas: 3 },
 ]
 

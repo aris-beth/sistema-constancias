@@ -37,13 +37,13 @@ const PLANTILLAS_POR_ROL: Record<string, string> = {
   ASISTENTE: 'Por su asistencia {AL_EVENTO}, llevado a cabo {FECHA_EVENTO}, {SEDE}.',
   ASISTENTES: 'Por su asistencia {AL_EVENTO}, llevado a cabo {FECHA_EVENTO}, {SEDE}.',
   'ASISTENTE TALLER':
-    'Por su asistencia al taller “{PONENCIA}”, impartido en el marco {DEL_EVENTO}, realizado {FECHA_EVENTO}, con una duración de {DURACION}.',
+    'Por su asistencia al taller “{PONENCIA}”, impartido en el marco {DEL_EVENTO}, realizado {FECHA_EVENTO}, con una duración de {DURACION}, {SEDE}.',
   'ASISTENTE AL TALLER':
-    'Por su asistencia al taller “{PONENCIA}”, impartido en el marco {DEL_EVENTO}, realizado {FECHA_EVENTO}, con una duración de {DURACION}.',
+    'Por su asistencia al taller “{PONENCIA}”, impartido en el marco {DEL_EVENTO}, realizado {FECHA_EVENTO}, con una duración de {DURACION}, {SEDE}.',
   'ASISTENTES TALLER':
-    'Por su asistencia al taller “{PONENCIA}”, impartido en el marco {DEL_EVENTO}, realizado {FECHA_EVENTO}, con una duración de {DURACION}.',
+    'Por su asistencia al taller “{PONENCIA}”, impartido en el marco {DEL_EVENTO}, realizado {FECHA_EVENTO}, con una duración de {DURACION}, {SEDE}.',
   'ASISTENTES AL TALLER':
-    'Por su asistencia al taller “{PONENCIA}”, impartido en el marco {DEL_EVENTO}, realizado {FECHA_EVENTO}, con una duración de {DURACION}.',
+    'Por su asistencia al taller “{PONENCIA}”, impartido en el marco {DEL_EVENTO}, realizado {FECHA_EVENTO}, con una duración de {DURACION}, {SEDE}.',
   'PONENTE CONFERENCIA':
     'Por presentar la conferencia titulada “{PONENCIA}”, en el marco {DEL_EVENTO}, llevado a cabo {FECHA_EVENTO}, {SEDE}.',
   'PONENTES CONFERENCIA':

@@ -107,12 +107,17 @@ export async function generarPdfsPorRol(
   carpetaDestino: string,
   sello: ConfiguracionSello,
   firmantes: ConfiguracionFirmantesGraduacion,
+  numeroTanda?: number,
 ): Promise<ResultadoGeneracionPdfs> {
   if (!carpetaDestino.trim()) throw new Error('La carpeta de destino es obligatoria.')
   if (grupos.length === 0) throw new Error('El evento no tiene documentos para generar.')
 
   const esGraduacion = evento.tipoPlantilla === 'graduacion'
-  const carpetaEvento = path.join(carpetaDestino, nombreCarpetaEvento(evento))
+  const carpetaEvento = path.join(
+    carpetaDestino,
+    nombreCarpetaEvento(evento),
+    ...(numeroTanda && numeroTanda > 1 ? [`Lote-${String(numeroTanda).padStart(4, '0')}`] : []),
+  )
   const carpetaPdfs = path.join(carpetaEvento, 'PDFs')
   await fs.mkdir(carpetaPdfs, { recursive: true })
 

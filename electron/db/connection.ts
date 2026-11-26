@@ -135,6 +135,22 @@ function ejecutarMigraciones(db: Database.Database): void {
   }>
   const nombresColumnas = new Set(columnasConstancia.map((columna) => columna.name))
 
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS tanda_importacion (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      evento_id INTEGER NOT NULL REFERENCES evento(id) ON DELETE CASCADE,
+      numero_tanda INTEGER NOT NULL,
+      huella_contenido TEXT NOT NULL,
+      fecha_generacion TEXT NOT NULL,
+      UNIQUE (evento_id, numero_tanda),
+      UNIQUE (evento_id, huella_contenido)
+    )
+  `)
+  if (!nombresColumnas.has('tanda_id')) {
+    db.exec('ALTER TABLE constancia ADD COLUMN tanda_id INTEGER REFERENCES tanda_importacion(id)')
+  }
+  db.exec('CREATE INDEX IF NOT EXISTS idx_constancia_tanda ON constancia(tanda_id)')
+
   if (!nombresColumnas.has('universidad_origen')) {
     // Los registros antiguos solo tenían la universidad en el participante,
     // un dato compartido entre eventos que puede no corresponder a esta constancia.

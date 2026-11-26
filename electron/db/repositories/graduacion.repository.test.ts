@@ -86,6 +86,59 @@ describe('guardarLoteGraduacion', () => {
     ).toEqual([{ nombre_normalizado: 'RUIZ MARIA' }])
   })
 
+  it('agrega un lote sin eliminar reconocimientos previos y continúa los folios internos', () => {
+    guardarLoteGraduacion('GRAD-2026-002', [fila()], 'nuevo')
+
+    const resultado = guardarLoteGraduacion(
+      'GRAD-2026-002',
+      [fila({ nombreOriginal: 'Ana Lopez', nombreNormalizado: 'LOPEZ ANA' })],
+      'agregar',
+    )
+    const db = obtenerBaseDeDatos()
+
+    expect(resultado).toMatchObject({
+      folioEvento: 'GRAD-2026-002',
+      numeroTanda: 2,
+      foliosInternos: ['GRAD-2026-002-0002'],
+    })
+    expect(
+      db.prepare('SELECT folio_interno, tanda_id FROM constancia ORDER BY id').all(),
+    ).toEqual([
+      { folio_interno: 'GRAD-2026-002-0001', tanda_id: 1 },
+      { folio_interno: 'GRAD-2026-002-0002', tanda_id: 2 },
+    ])
+  })
+
+  it('guarda el nombre impreso de cada fila sin reutilizar el orden de otra constancia de la misma persona', () => {
+    guardarLoteGraduacion(
+      'GRAD-2026-004',
+      [
+        fila({ nombreOriginal: 'Perez Juan', nombreNormalizado: 'PEREZ JUAN' }),
+        fila({ numeroFila: 3, nombreOriginal: 'Juan Perez', nombreNormalizado: 'PEREZ JUAN' }),
+      ],
+      'nuevo',
+    )
+
+    expect(
+      obtenerBaseDeDatos()
+        .prepare('SELECT nombre_impreso FROM constancia ORDER BY id')
+        .all(),
+    ).toEqual([{ nombre_impreso: 'Perez Juan' }, { nombre_impreso: 'Juan Perez' }])
+  })
+
+  it('rechaza un lote idéntico para prevenir una carga duplicada accidental', () => {
+    guardarLoteGraduacion('GRAD-2026-003', [fila()], 'nuevo')
+
+    expect(() => guardarLoteGraduacion('GRAD-2026-003', [fila()], 'agregar')).toThrow(
+      'El contenido coincide con el lote de constancias 1 ya registrado en este evento.',
+    )
+    expect(
+      obtenerBaseDeDatos()
+        .prepare('SELECT COUNT(*) AS total FROM constancia WHERE evento_id = (SELECT id FROM evento WHERE folio = ?)')
+        .get('GRAD-2026-003'),
+    ).toEqual({ total: 1 })
+  })
+
   it('no permite reemplazar un evento regular con el flujo de graduación', () => {
     obtenerBaseDeDatos()
       .prepare(

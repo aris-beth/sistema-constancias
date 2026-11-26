@@ -203,6 +203,55 @@ describe('plantillaDocumento', () => {
     expect(html).toContain('<b>Generación 2021-2026</b><br/>de la <b>' + carrera + '</b>.')
   })
 
+  it('conserva los saltos de línea explícitos en el texto de graduación', () => {
+    const texto =
+      'Por la excelencia de su labor docente, gran calidad profesional y humana\n' +
+      'que inspiran a la comunidad universitaria a distinguirla como\n' +
+      'MADRINA de la Generación 2019 - 2026'
+    const html = crearPaginaGraduacion(
+      documento({
+        texto,
+        ...opcionesCuerpoGraduacion('2019 - 2026', '', texto),
+      }),
+      firmantes,
+    )
+
+    expect(html).toContain(
+      'gran calidad profesional y humana<br/>que inspiran a la comunidad universitaria a distinguirla como<br/><b>MADRINA de la Generación 2019 - 2026</b>',
+    )
+  })
+
+  it('resalta cada plantilla de graduación usando sus valores reales aunque cambien mayúsculas o carrera', () => {
+    const ejemplos = [
+      {
+        texto: 'Por ser integrante de la Generación 2019 - 2026 de la Ingeniería Biomédica.',
+        html: '<b>Generación 2019 - 2026</b><br/>de la <b>Ingeniería Biomédica</b>.',
+      },
+      {
+        texto: 'Por obtener la distinción al mérito académico en la Ingeniería Biomédica, 2019 - 2026.',
+        html: '<b>distinción al mérito académico</b> en la Ingeniería Biomédica, <b>2019 - 2026</b>.',
+      },
+      {
+        texto: 'Por su destacada labor docente, en favor de la Generación 2019 - 2026.',
+        html: 'Por su destacada labor docente, en favor de la <b>Generación 2019 - 2026</b>.',
+      },
+      {
+        texto: 'MADRINA de la Generación 2019 - 2026',
+        html: '<b>MADRINA de la Generación 2019 - 2026</b>',
+      },
+      {
+        texto: 'PADRINO de la Generación 2019 - 2026',
+        html: '<b>PADRINO de la Generación 2019 - 2026</b>',
+      },
+    ]
+
+    for (const ejemplo of ejemplos) {
+      const opciones = opcionesCuerpoGraduacion('2019 - 2026', 'Carrera distinta', ejemplo.texto)
+      const html = crearPaginaGraduacion(documento({ texto: ejemplo.texto, ...opciones }), firmantes)
+      expect(html).toContain(ejemplo.html)
+    }
+  })
+
   it('resaltarFragmentos prefiere el fragmento más largo y no anida etiquetas', () => {
     expect(resaltarFragmentos('Generación 2021-2026, x', ['2021-2026', 'Generación 2021-2026'])).toBe(
       '<b>Generación 2021-2026</b>, x',
@@ -214,6 +263,7 @@ describe('plantillaDocumento', () => {
     expect(formatearNombreGraduacion('YULISET SANZÓN ROSAS')).toBe('Yuliset Sanzón Rosas')
     expect(formatearNombreGraduacion('MARÍA DE LA LUZ PÉREZ')).toBe('María de la Luz Pérez')
     expect(formatearNombreGraduacion('Yuliset Sanzón Rosas')).toBe('Yuliset Sanzón Rosas')
+    expect(formatearNombreGraduacion('PÉREZ JUAN')).toBe('Pérez Juan')
   })
 
   it.each([

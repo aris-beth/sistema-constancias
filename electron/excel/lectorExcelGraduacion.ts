@@ -15,7 +15,6 @@ const CAMPOS_OBLIGATORIOS: Array<keyof FilaExcelCrudaGraduacion> = [
   'nombreCompleto',
   'subtipo',
   'generacion',
-  'carrera',
   'fecha',
 ]
 

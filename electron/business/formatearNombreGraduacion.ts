@@ -1,6 +1,6 @@
 /**
- * Presenta nombres de graduación en orden natural. Las partículas se
- * mantienen en minúsculas, igual que en la plantilla institucional.
+ * Ajusta mayúsculas y minúsculas sin inferir ni cambiar el orden recibido.
+ * Las partículas se mantienen en minúsculas, igual que en la plantilla.
  */
 export function formatearNombreGraduacion(nombre: string): string {
   const limpio = nombre.trim().replace(/\s+/g, ' ')

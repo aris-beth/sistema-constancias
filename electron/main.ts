@@ -71,9 +71,18 @@ app.whenReady().then(() => {
 
   registrarManejadoresExcel()
   registrarManejadorCargarGraduacion()
-  ipcMain.handle('excel:guardarGraduacion', (_evento, entrada: GuardarGraduacionEntrada) =>
-    guardarLoteGraduacion(entrada.folioEvento, entrada.filas),
-  )
+  ipcMain.handle('excel:guardarGraduacion', (_evento, entrada: GuardarGraduacionEntrada) => {
+    if (!entrada || typeof entrada !== 'object' || !Array.isArray(entrada.filas)) {
+      throw new Error('La solicitud de guardado de graduación no es válida.')
+    }
+    if (entrada.folioEvento != null && typeof entrada.folioEvento !== 'string') {
+      throw new Error('El folio del evento no es válido.')
+    }
+    if (entrada.modo !== undefined && !['nuevo', 'agregar', 'reemplazar'].includes(entrada.modo)) {
+      throw new Error('El modo de guardado no es válido.')
+    }
+    return guardarLoteGraduacion(entrada.folioEvento, entrada.filas, entrada.modo)
+  })
   registrarManejadorGuardarLote()
   registrarManejadorGenerarPdfs()
   registrarManejadoresEvento()

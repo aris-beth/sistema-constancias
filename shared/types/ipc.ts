@@ -47,7 +47,10 @@ export interface GuardarLoteEntrada {
   /** Si viene vacío/null, el sistema genera el folio automáticamente. */
   folioEvento: string | null
   filas: FilaProcesada[]
+  modo?: ModoGuardado
 }
+
+export type ModoGuardado = 'nuevo' | 'agregar' | 'reemplazar'
 
 export interface GuardarLoteResultado {
   folioEvento: string
@@ -56,6 +59,8 @@ export interface GuardarLoteResultado {
   reconocimientosCreados: number
   constanciasPendientes: number
   foliosInternos: string[]
+  tandaId: number
+  numeroTanda: number
 }
 
 export interface ListarEventosReimprimiblesEntrada {
@@ -64,6 +69,8 @@ export interface ListarEventosReimprimiblesEntrada {
 
 export interface GenerarPdfsEntrada {
   folioEvento: string
+  /** Cuando se indica, genera exclusivamente los documentos de esa tanda. */
+  tandaId?: number
   /** Carpeta elegida en la pantalla de generación. Si se omite, el proceso
    * main abre su propio diálogo para elegirla. */
   carpetaDestino?: string
@@ -249,6 +256,7 @@ export interface ResultadoCargaGraduacion {
 export interface GuardarGraduacionEntrada {
   folioEvento: string | null
   filas: FilaProcesadaGraduacion[]
+  modo?: ModoGuardado
 }
 
 export interface GuardarGraduacionResultado {
@@ -256,4 +264,6 @@ export interface GuardarGraduacionResultado {
   nombreEvento: string
   reconocimientosCreados: number
   foliosInternos: string[]
+  tandaId: number
+  numeroTanda: number
 }

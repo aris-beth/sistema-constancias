@@ -111,15 +111,48 @@ export function institucionParaDocumento(universidad: string | null | undefined)
 export function opcionesCuerpoGraduacion(
   generacion: string | null,
   carrera: string | null,
+  texto?: string,
 ): Pick<DatosDocumentoPdf, 'resaltar' | 'saltoAntesDe'> {
   const gen = (generacion ?? '').trim()
   const car = (carrera ?? '').trim()
+  const madrinaPadrino = texto?.match(/\b(?:MADRINA|PADRINO)\s+de la\s+Generación\s+([^\r\n.]+)/iu)
+  if (madrinaPadrino) {
+    return { resaltar: [madrinaPadrino[0].trim()], saltoAntesDe: null }
+  }
+
+  const integrante = texto?.match(/\bGeneración\s+(.+?)\s+de la\s+(.+?)\.?\s*$/imu)
+  if (integrante) {
+    const carreraTexto = integrante[2].trim()
+    return {
+      resaltar: [`Generación ${integrante[1].trim()}`, carreraTexto],
+      saltoAntesDe: ` de la ${carreraTexto}`,
+    }
+  }
+
+  if (texto && /Distinción al Mérito Académico/iu.test(texto)) {
+    const generacionTexto = texto.match(/,\s*([^,\r\n.]+)\s*\.?\s*$/mu)?.[1]?.trim() || gen
+    return {
+      resaltar: ['Distinción al Mérito Académico', generacionTexto].filter(Boolean),
+      saltoAntesDe: null,
+    }
+  }
+
+  const laborDocente = texto?.match(/\bGeneración\s+([^\r\n.]+)/iu)
+  if (laborDocente && /labor docente/iu.test(texto ?? '')) {
+    return {
+      resaltar: [`Generación ${laborDocente[1].trim()}`],
+      saltoAntesDe: null,
+    }
+  }
+
   return {
     resaltar: [
       gen ? `Generación ${gen}` : '',
       gen,
       car,
       'Distinción al Mérito Académico',
+      'MADRINA',
+      'PADRINO',
     ].filter(Boolean),
     saltoAntesDe: car ? ` de la ${car}` : null,
   }
@@ -140,20 +173,26 @@ export function resaltarFragmentos(texto: string, fragmentos: string[] | undefin
       .sort((a, b) => b.length - a.length)
       .map(escaparRegex)
       .join('|'),
-    'g',
+    'giu',
   )
   return escapado.replace(patron, (coincidencia) => `<b>${coincidencia}</b>`)
 }
 
 function cuerpoHtml(documento: DatosDocumentoPdf): string {
+  const renderizarLineas = (texto: string): string =>
+    texto
+      .split(/\r?\n/)
+      .map((linea) => resaltarFragmentos(linea, documento.resaltar))
+      .join('<br/>')
+
   const salto = documento.saltoAntesDe?.trim()
   const indice = salto ? documento.texto.indexOf(salto) : -1
   if (salto && indice > 0) {
     const primera = documento.texto.slice(0, indice).trimEnd()
     const segunda = documento.texto.slice(indice).trimStart()
-    return `${resaltarFragmentos(primera, documento.resaltar)}<br/>${resaltarFragmentos(segunda, documento.resaltar)}`
+    return `${renderizarLineas(primera)}<br/>${renderizarLineas(segunda)}`
   }
-  return resaltarFragmentos(documento.texto, documento.resaltar)
+  return renderizarLineas(documento.texto)
 }
 
 function destinatarioHtml(nombre: string, escala = 1): { html: string; tamanoPt: number } {

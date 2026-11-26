@@ -29,6 +29,23 @@ describe('validarFilaExcelGraduacion', () => {
   })
 
   it.each([
+    'Labor docente',
+    'Maestro (Labor docente)',
+    'Madrina de generación',
+    'Padrino de generación',
+  ])(
+    'no requiere carrera para el subtipo %s',
+    (subtipo) => {
+      expect(
+        validarFilaExcelGraduacion(
+          { ...filaValida, subtipo, carrera: '' },
+          [subtipo],
+        ),
+      ).toEqual({ valida: true, errores: [] })
+    },
+  )
+
+  it.each([
     ['nombre', { nombreCompleto: '' }, 'falta el nombre completo.'],
     ['subtipo', { subtipo: 'Diplomado' }, "el subtipo 'Diplomado' no está en el catálogo de graduación."],
     ['generación', { generacion: '' }, 'falta la generación.'],

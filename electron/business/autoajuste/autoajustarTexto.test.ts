@@ -12,9 +12,13 @@ describe('autoajustarTexto', () => {
     [39, 16, 1],
     [40, 16, 1],
     [42, 16, 1],
-    [43, 14, 2],
-    [82, 14, 2],
-    [83, 11, 3],
+    [43, 14, 1],
+    [60, 14, 1],
+    [61, 12, 1],
+    [78, 12, 1],
+    [82, 11, 2],
+    [83, 11, 2],
+    [111, 11, 3],
   ])('usa el nivel exacto para un nombre de %s caracteres', (longitud, fuente, lineas) => {
     const resultado = autoajustarTexto(textoDeLongitud(longitud), 'nombre')
 
@@ -32,7 +36,7 @@ describe('autoajustarTexto', () => {
     expect(resultado.excedeLimiteCalibrado).toBe(false)
   })
 
-  it('balancea el ancho y permite saltos entre palabras completas de un nombre', () => {
+  it('mantiene en una sola línea un nombre de hasta 78 caracteres cuando cabe en la fuente reducida', () => {
     const nombres = [
       'Alejandra Montserrat Fernández',
       'Roberto Carlos Martínez',
@@ -40,12 +44,8 @@ describe('autoajustarTexto', () => {
       'Eva Ruiz',
     ]
     const resultado = autoajustarTexto(nombres.join(', '), 'nombre')
-    const anchos = resultado.lineas.map((linea) => linea.length)
-
-    expect(resultado.lineas).toHaveLength(2)
-    expect(Math.max(...anchos) - Math.min(...anchos)).toBeLessThanOrEqual(2)
-    expect(resultado.lineas[0]).toMatch(/Roberto$/)
-    expect(resultado.lineas[1]).toMatch(/^Carlos/)
+    expect(resultado.lineas).toHaveLength(1)
+    expect(resultado.tamanoFuentePt).toBe(12)
     expect(resultado.lineas.join(' ')).toBe(nombres.join(', '))
   })
 
